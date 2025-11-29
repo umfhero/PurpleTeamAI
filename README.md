@@ -32,6 +32,8 @@ This project bridges the gap between attackers and defenders by integrating thes
 
 ## Key Features
 
+<img src="assets/Smallerbanner.png" alt="PurpleTeamAI Small Banner" width="100%" />
+
 ### Recon Module
 This part handles the initial information gathering. It performs tasks like automated subdomain enumeration and port scanning. It also maps out the attack surface so you can see what assets are exposed. I am also integrating some OSINT tools to pull in data from other sources.
 
