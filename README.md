@@ -20,14 +20,14 @@
   </p>
 </div>
 
-PurpleTeamAI is a comprehensive security suite that I've been working on. It's designed to bring together both offensive and defensive security operations using Artificial Intelligence. The idea is to bridge the gap between the red team (attackers) and the blue team (defenders), which is why I've called it PurpleTeamAI. It's not just about attacking; it covers reconnaissance, pentesting, and active defence, all in one dashboard.
+PurpleTeamAI is a comprehensive security suite that I am developing for my final year dissertation project as part of my Cybersecurity and Digital Forensics course. The aim is to combine reconnaissance, red teaming (offensive), and blue teaming (defensive) operations into a single, unified application—creating a complete 'Purple Team' suite.
 
-I built this for security researchers and anyone interested in seeing how AI can help with vulnerability analysis and remediation. It uses Large Language Models (LLMs) to help understand security flaws and suggest how to fix them.
+This project bridges the gap between attackers and defenders by integrating these distinct disciplines into one dashboard. It is not just about attacking; it covers the entire lifecycle from reconnaissance to pentesting and active defence. I am designing this for security researchers to demonstrate how Artificial Intelligence can assist with vulnerability analysis and remediation, utilising Large Language Models (LLMs) to identify security flaws and suggest real-time fixes.
 
 ## Key Features
 
 ### Recon Module
-This part handles the initial information gathering. It does things like automated subdomain enumeration and port scanning. It also maps out the attack surface so you can see what assets are exposed. I've also integrated some OSINT tools to pull in data from other sources.
+This part handles the initial information gathering. It performs tasks like automated subdomain enumeration and port scanning. It also maps out the attack surface so you can see what assets are exposed. I am also integrating some OSINT tools to pull in data from other sources.
 
 ### Pentesting Module
 This is the offensive side. It integrates vulnerability scanners and can help map findings to the MITRE ATT&CK framework. There's an AI agent that tries to identify logic flaws and suggest potential ways an attacker might get in.
@@ -40,9 +40,9 @@ This is the brain of the operation. It analyses data from all the other modules 
 
 ## Architecture
 
-I've used a modern tech stack for this project:
+I am using a modern tech stack for this project:
 
-- **Frontend**: React 18 with TypeScript and Vite. I've gone for a dark-themed dashboard.
+- **Frontend**: React 18 with TypeScript and Vite. I am using a dark-themed dashboard.
 - **Backend**: FastAPI (Python) with PostgreSQL for the database.
 - **Task Queue**: Celery and Redis to handle the long-running scans.
 - **AI Integration**: It supports OpenAI, Gemini, and local models via Ollama.
