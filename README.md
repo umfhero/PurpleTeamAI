@@ -1,6 +1,24 @@
-# PurpleTeamAI
+<div align="center">
+  <img src="assets/Banner.png" alt="PurpleTeamAI Banner" width="100%" />
 
-**The Framework for AI-Powered Security Operations**
+  # PurpleTeamAI
+  
+  **The Framework for AI-Powered Security Operations**
+
+  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+  [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+  [![React](https://img.shields.io/badge/react-18-blue.svg)](https://reactjs.org/)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-0.95+-009688.svg)](https://fastapi.tiangolo.com/)
+  [![Docker](https://img.shields.io/badge/docker-compose-2496ED.svg)](https://www.docker.com/)
+
+  <p align="center">
+    <a href="#key-features">Features</a> •
+    <a href="#architecture">Architecture</a> •
+    <a href="#getting-started">Getting Started</a> •
+    <a href="#roadmap">Roadmap</a> •
+    <a href="#contributing">Contributing</a>
+  </p>
+</div>
 
 PurpleTeamAI is a comprehensive security suite that I've been working on. It's designed to bring together both offensive and defensive security operations using Artificial Intelligence. The idea is to bridge the gap between the red team (attackers) and the blue team (defenders), which is why I've called it PurpleTeamAI. It's not just about attacking; it covers reconnaissance, pentesting, and active defence, all in one dashboard.
 
@@ -30,35 +48,7 @@ I've used a modern tech stack for this project:
 - **AI Integration**: It supports OpenAI, Gemini, and local models via Ollama.
 - **Infrastructure**: Everything is dockerised so it's easy to spin up.
 
-## Getting Started
 
-### Prerequisites
-You'll need Docker and Docker Compose installed. If you want to run it locally without Docker, you'll need Node.js and Python installed.
-
-### Quick Start (Docker)
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/PurpleTeamAI.git
-   cd PurpleTeamAI
-   ```
-
-2. **Set up Environment Variables**
-   ```bash
-   cp backend/.env.example backend/.env
-   # You'll need to edit backend/.env with your API keys and database details
-   ```
-
-3. **Start the Application**
-   ```bash
-   docker-compose up -d
-   ```
-   - The frontend will be at `http://localhost:5173`
-   - The backend API will be at `http://localhost:8000`
-
-### Manual Setup
-
-If you prefer to set it up manually, have a look at the `walkthrough.md` file for more detailed instructions.
 
 ## Roadmap
 
@@ -68,16 +58,4 @@ If you prefer to set it up manually, have a look at the `walkthrough.md` file fo
 - [ ] **Phase 4: Defense Module** - Implementing threat monitoring and remediation.
 - [ ] **Phase 5: Integration & Polish** - Tying it all together with the AI engine.
 
-## Contributing
 
-If you want to help out, feel free to submit a Pull Request. I'm open to contributions!
-
-1. Fork the Project
-2. Create your Feature Branch
-3. Commit your Changes
-4. Push to the Branch
-5. Open a Pull Request
-
-## License
-
-Distributed under the MIT License. See `LICENSE` for more information.
