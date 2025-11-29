@@ -11,6 +11,7 @@
   [![FastAPI](https://img.shields.io/badge/FastAPI-0.95+-009688.svg)](https://fastapi.tiangolo.com/)
   [![Docker](https://img.shields.io/badge/docker-compose-2496ED.svg)](https://www.docker.com/)
 
+
 </div>
 
 
@@ -27,14 +28,21 @@ This part handles the initial information gathering. It performs tasks like auto
 ### Pentesting Module
 This is the offensive side. It integrates vulnerability scanners and can help map findings to the MITRE ATT&CK framework. There's an AI agent that tries to identify logic flaws and suggest potential ways an attacker might get in.
 
-
 ### Defense Module
 This is the defensive side. It's meant for monitoring threats and analysing logs in real time. The cool part is the auto remediation, where the AI suggests fixes for the vulnerabilities it finds. It also checks for compliance with security benchmarks.
 
 ### AI Engine
 This is the brain of the operation. It analyses data from all the other modules to give a better picture of the security posture. It calculates risk scores and can generate reports in plain English, so you don't have to decipher raw logs.
 
+---
 
+## Roadmap
+
+- [x] **Phase 1: Foundation** - Setting up the core architecture, database, and dashboard.
+- [ ] **Phase 2: Recon Module** - Integrating the scanning tools.
+- [ ] **Phase 3: Pentesting Module** - Adding vulnerability scanning.
+- [ ] **Phase 4: Defense Module** - Implementing threat monitoring and remediation.
+- [ ] **Phase 5: Integration & Polish** - Tying it all together with the AI engine.
 
 ## Architecture
 
@@ -45,15 +53,3 @@ I am using a modern tech stack for this project:
 - **Task Queue**: Celery and Redis to handle the long running scans.
 - **AI Integration**: It supports OpenAI, Gemini, and local models via Ollama.
 - **Infrastructure**: Everything is dockerised so it's easy to spin up.
-
-
-
-## Roadmap
-
-- [x] **Phase 1: Foundation** - Setting up the core architecture, database, and dashboard.
-- [ ] **Phase 2: Recon Module** - Integrating the scanning tools.
-- [ ] **Phase 3: Pentesting Module** - Adding vulnerability scanning.
-- [ ] **Phase 4: Defense Module** - Implementing threat monitoring and remediation.
-- [ ] **Phase 5: Integration & Polish** - Tying it all together with the AI engine.
-
-
