@@ -5,8 +5,8 @@
   
   **The Framework for AI Powered Security Operations**
 
-  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-  [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+
+  [![Python](https://img.shields.io/badge/python-3.10+-yellow.svg)](https://www.python.org/)
   [![React](https://img.shields.io/badge/react-18-blue.svg)](https://reactjs.org/)
   [![FastAPI](https://img.shields.io/badge/FastAPI-0.95+-009688.svg)](https://fastapi.tiangolo.com/)
   [![Docker](https://img.shields.io/badge/docker-compose-2496ED.svg)](https://www.docker.com/)
