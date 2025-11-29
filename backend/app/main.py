@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .database import create_db_and_tables
 from .api.v1 import api
 
-app = FastAPI(title="RedTeamAI API", version="1.0.0")
+app = FastAPI(title="PurpleTeamAI API", version="1.0.0")
 
 # CORS Configuration
 origins = [
@@ -25,6 +25,6 @@ def on_startup():
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to RedTeamAI API"}
+    return {"message": "Welcome to PurpleTeamAI API"}
 
 app.include_router(api.api_router, prefix="/api/v1")

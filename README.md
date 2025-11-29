@@ -1,115 +1,83 @@
-<div align="center">
-  <img src="assets/Banner.png" alt="RedTeamAI Banner" width="100%" />
+# PurpleTeamAI
 
-  # RedTeamAI
-  
-  **The Framework for AI-Powered Security Operations**
+**The Framework for AI-Powered Security Operations**
 
-  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-  [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
-  [![React](https://img.shields.io/badge/react-18-blue.svg)](https://reactjs.org/)
-  [![FastAPI](https://img.shields.io/badge/FastAPI-0.95+-009688.svg)](https://fastapi.tiangolo.com/)
-  [![Docker](https://img.shields.io/badge/docker-compose-2496ED.svg)](https://www.docker.com/)
+PurpleTeamAI is a comprehensive security suite that I've been working on. It's designed to bring together both offensive and defensive security operations using Artificial Intelligence. The idea is to bridge the gap between the red team (attackers) and the blue team (defenders), which is why I've called it PurpleTeamAI. It's not just about attacking; it covers reconnaissance, pentesting, and active defence, all in one dashboard.
 
-  <p align="center">
-    <a href="#features">Features</a> •
-    <a href="#architecture">Architecture</a> •
-    <a href="#getting-started">Getting Started</a> •
-    <a href="#roadmap">Roadmap</a> •
-    <a href="#contributing">Contributing</a>
-  </p>
-</div>
+I built this for security researchers and anyone interested in seeing how AI can help with vulnerability analysis and remediation. It uses Large Language Models (LLMs) to help understand security flaws and suggest how to fix them.
 
----
+## Key Features
 
-## 🛡️ What is RedTeamAI?
+### Recon Module
+This part handles the initial information gathering. It does things like automated subdomain enumeration and port scanning. It also maps out the attack surface so you can see what assets are exposed. I've also integrated some OSINT tools to pull in data from other sources.
 
-**RedTeamAI** is an advanced, all-in-one security suite designed to bridge the gap between offensive and defensive security operations using Artificial Intelligence. It integrates powerful reconnaissance tools, automated pentesting capabilities, and real-time defense mechanisms into a unified, module-based dashboard.
+### Pentesting Module
+This is the offensive side. It integrates vulnerability scanners and can help map findings to the MITRE ATT&CK framework. There's an AI agent that tries to identify logic flaws and suggest potential ways an attacker might get in.
 
-Built for security researchers, penetration testers, and blue teams, RedTeamAI leverages LLMs (Large Language Models) to analyze vulnerabilities, generate exploit chains, and suggest remediation strategies in real-time.
+### Defense Module
+This is the defensive side. It's meant for monitoring threats and analysing logs in real-time. The cool part is the auto-remediation, where the AI suggests fixes for the vulnerabilities it finds. It also checks for compliance with security benchmarks.
 
-## ✨ Key Features
+### AI Engine
+This is the brain of the operation. It analyses data from all the other modules to give a better picture of the security posture. It calculates risk scores and can generate reports in plain English, so you don't have to decipher raw logs.
 
-### 🔍 Recon Module
-- **Asset Discovery**: Automated subdomain enumeration and port scanning.
-- **Attack Surface Mapping**: Visual graph of discovered assets and relationships.
-- **OSINT Integration**: Aggregates data from Shodan, theHarvester, and more.
+## Architecture
 
-### ⚔️ Pentesting Module
-- **Vulnerability Scanning**: Integrates Nuclei and custom scripts.
-- **Exploit Orchestration**: Maps findings to the MITRE ATT&CK framework.
-- **AI Agent**: Identifies business logic flaws and suggests exploit paths.
+I've used a modern tech stack for this project:
 
-### 🛡️ Defense Module
-- **Threat Monitoring**: Real-time anomaly detection and log analysis.
-- **Auto-Remediation**: AI-generated fix suggestions for identified vulnerabilities.
-- **Hardening Checks**: Automated CIS benchmark compliance auditing.
+- **Frontend**: React 18 with TypeScript and Vite. I've gone for a dark-themed dashboard.
+- **Backend**: FastAPI (Python) with PostgreSQL for the database.
+- **Task Queue**: Celery and Redis to handle the long-running scans.
+- **AI Integration**: It supports OpenAI, Gemini, and local models via Ollama.
+- **Infrastructure**: Everything is dockerised so it's easy to spin up.
 
-### 🧠 AI Engine
-- **Centralized Intelligence**: Context-aware analysis across all modules.
-- **Risk Scoring**: Dynamic 0-10 risk calculation based on exploitability and impact.
-- **Natural Language Reporting**: Generates human-readable security reports.
-
-## 🏗️ Architecture
-
-RedTeamAI follows a modern, microservices-inspired architecture:
-
-- **Frontend**: React 18 + TypeScript + Vite (Dark-themed, responsive dashboard).
-- **Backend**: FastAPI (Async Python) + SQLModel + PostgreSQL.
-- **Task Queue**: Celery + Redis for long-running scans.
-- **AI Integration**: Support for OpenAI, Gemini, and local Ollama models.
-- **Infrastructure**: Dockerized environment for isolation and easy deployment.
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-- [Docker & Docker Compose](https://www.docker.com/)
-- [Node.js 18+](https://nodejs.org/) (for local frontend dev)
-- [Python 3.10+](https://www.python.org/) (for local backend dev)
+You'll need Docker and Docker Compose installed. If you want to run it locally without Docker, you'll need Node.js and Python installed.
 
 ### Quick Start (Docker)
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/RedTeamAI.git
-   cd RedTeamAI
+   git clone https://github.com/yourusername/PurpleTeamAI.git
+   cd PurpleTeamAI
    ```
 
 2. **Set up Environment Variables**
    ```bash
    cp backend/.env.example backend/.env
-   # Edit backend/.env with your API keys and database credentials
+   # You'll need to edit backend/.env with your API keys and database details
    ```
 
 3. **Start the Application**
    ```bash
    docker-compose up -d
    ```
-   - Frontend: `http://localhost:5173`
-   - Backend API: `http://localhost:8000`
+   - The frontend will be at `http://localhost:5173`
+   - The backend API will be at `http://localhost:8000`
 
 ### Manual Setup
 
-See [Walkthrough](walkthrough.md) for detailed manual installation instructions.
+If you prefer to set it up manually, have a look at the `walkthrough.md` file for more detailed instructions.
 
-## 🗺️ Roadmap
+## Roadmap
 
-- [x] **Phase 1: Foundation** - Core architecture, DB, and Dashboard setup.
-- [ ] **Phase 2: Recon Module** - Subdomain enumeration and port scanning integration.
-- [ ] **Phase 3: Pentesting Module** - Vulnerability scanning and exploit chaining.
-- [ ] **Phase 4: Defense Module** - Threat monitoring and remediation.
-- [ ] **Phase 5: Integration & Polish** - Unified AI engine and reporting.
+- [x] **Phase 1: Foundation** - Setting up the core architecture, database, and dashboard.
+- [ ] **Phase 2: Recon Module** - Integrating the scanning tools.
+- [ ] **Phase 3: Pentesting Module** - Adding vulnerability scanning.
+- [ ] **Phase 4: Defense Module** - Implementing threat monitoring and remediation.
+- [ ] **Phase 5: Integration & Polish** - Tying it all together with the AI engine.
 
-## 🤝 Contributing
+## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+If you want to help out, feel free to submit a Pull Request. I'm open to contributions!
 
 1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
+2. Create your Feature Branch
+3. Commit your Changes
+4. Push to the Branch
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 Distributed under the MIT License. See `LICENSE` for more information.

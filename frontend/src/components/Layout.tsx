@@ -25,7 +25,7 @@ export default function Layout() {
                 )}
             >
                 <div className="p-4 flex items-center justify-between border-b border-border h-16">
-                    {sidebarOpen && <span className="font-bold text-xl text-primary">RedTeamAI</span>}
+                    {sidebarOpen && <span className="font-bold text-xl text-primary">PurpleTeamAI</span>}
                     <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 hover:bg-accent rounded">
                         <Menu size={20} />
                     </button>
