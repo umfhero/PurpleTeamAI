@@ -26,7 +26,7 @@
 > [!IMPORTANT]
 > **Dissertation Project**: This application is being developed as part of a final year dissertation for the Cybersecurity and Digital Forensics course.
 
-PurpleTeamAI is a comprehensive security suite that I am developing for this project. The aim is to combine reconnaissance, red teaming (offensive), and blue teaming (defensive) operations into a single, unified application—creating a complete 'Purple Team' suite.
+PurpleTeamAI is a comprehensive security suite that I am developing for this project. The aim is to combine reconnaissance, red teaming (offensive), and blue teaming (defensive) operations into a single, unified application creating a complete 'Purple Team' suite.
 
 This project bridges the gap between attackers and defenders by integrating these distinct disciplines into one dashboard. It is not just about attacking; it covers the entire lifecycle from reconnaissance to pentesting and active defence. I am designing this for security researchers to demonstrate how Artificial Intelligence can assist with vulnerability analysis and remediation, utilising Large Language Models (LLMs) to identify security flaws and suggest real time fixes.
 
