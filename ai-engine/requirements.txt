@@ -1,0 +1,59 @@
+# AI Engine Dependencies
+# Python 3.10+
+
+# LangChain Core
+langchain==0.1.0
+langchain-openai==0.0.2
+langchain-community==0.0.10
+
+# LLM Providers
+openai==1.6.1
+ollama==0.1.6
+
+# Vector Store
+chromadb==0.4.22
+sentence-transformers==2.2.2
+
+# Data Processing
+pandas==2.1.4
+numpy==1.26.2
+
+# Web Framework (for API)
+fastapi==0.108.0
+uvicorn==0.25.0
+
+# Data Validation
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Report Generation
+jinja2==3.1.2
+markdown==3.5.1
+weasyprint==60.2  # For PDF generation
+
+# Utilities
+python-dotenv==1.0.0
+python-dateutil==2.8.2
+requests==2.31.0
+
+# Caching
+redis==5.0.1
+diskcache==5.6.3
+
+# Logging
+python-json-logger==2.0.7
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+
+# Code Quality
+black==23.12.1
+flake8==6.1.0
+mypy==1.7.1
+
+# Optional: Advanced Features
+# transformers==4.36.2  # For custom embeddings
+# torch==2.1.2  # For local model inference
