@@ -19,7 +19,7 @@
 
   ---
 
-  ### 🚀 [**START HERE**](./START_HERE.md) - New to this project? Begin here!
+  ### [START HERE](./START_HERE.md) - New to this project? Begin here!
 
   ---
 
@@ -28,7 +28,7 @@
 > [!IMPORTANT]
 > **Dissertation Project**: This application is being developed as part of a final year dissertation for the Cybersecurity and Digital Forensics course.
 >
-> **Current Status**: 🚧 Planning phase complete - ready to begin implementation
+> **Current Status**: Planning phase complete - ready to begin implementation
 
 PurpleTeamAI is a next-generation security operations platform that unifies reconnaissance, red teaming (offensive), and blue teaming (defensive) operations into a single, AI-powered desktop application. Built on a secure multi-tiered "Sidecar" architecture, it combines the power of Electron.js for the interface, Python for system-level security tools, and LangChain with GPT-4o/Ollama for intelligent analysis.
 
@@ -40,7 +40,7 @@ This project bridges the gap between attackers and defenders by integrating thes
 
 PurpleTeamAI employs a **Multi-Tiered "Sidecar" Architecture** designed for security, performance, and AI integration:
 
-### 🎨 Orchestration Layer: Electron.js + React + Tailwind
+### 🎨 Coordinator Layer: Electron.js + React + Tailwind
 - **Secure IPC Bridge** with Context Isolation to prevent RCE from tool outputs
 - Modern, responsive UI built with React 18 and Tailwind CSS
 - Real-time updates and interactive dashboards
@@ -60,25 +60,25 @@ PurpleTeamAI employs a **Multi-Tiered "Sidecar" Architecture** designed for secu
 
 ## Key Features
 
-### 🔍 Reconnaissance Module
+### Reconnaissance Module
 - Automated subdomain enumeration and port scanning
 - Attack surface mapping and visualization
 - OSINT data aggregation from multiple sources
 - LLM-powered analysis of reconnaissance data
 
-### 🔴 Pentesting Module (Red Team)
+### Pentesting Module (Red Team)
 - Integrated vulnerability scanners (SQLi, XSS, etc.)
 - Automated mapping to OWASP Top 10 and MITRE ATT&CK
 - AI-driven logic flaw identification
 - Exploit suggestion and attack path analysis
 
-### 🔵 Defense Module (Blue Team)
+### Defense Module (Blue Team)
 - Real-time threat monitoring and log analysis
 - Alert fatigue reduction through intelligent log condensation
 - **AI-Driven Auto-Remediation**: Automated patch generation and fix suggestions
 - Security compliance checking against industry benchmarks
 
-### 🤖 AI Engine
+### AI Engine
 - Multi-model support: GPT-4o, Ollama (local Llama models)
 - Intelligent risk scoring across all security findings
 - Executive reporting in plain English for non-technical stakeholders
@@ -140,7 +140,7 @@ PurpleTeamAI/
 - **Custom Parsers**: LLM-ready output normalization
 
 ### AI Engine (Reasoning)
-- **LangChain**: LLM orchestration framework
+- **LangChain**: LLM Coordinator framework
 - **GPT-4o**: Advanced reasoning and analysis
 - **Ollama**: Local LLM support (Llama 3, etc.)
 - **Vector Stores**: Semantic search capabilities
@@ -165,7 +165,7 @@ PurpleTeamAI/
 
 ### Current Status
 
-🚧 **Phase 0: Planning Complete**
+**Phase 0: Planning Complete**
 
 The project structure and architecture are fully documented. Implementation begins with Phase 1 (Foundation & Security).
 
@@ -195,7 +195,7 @@ See [QUICKSTART.md](./QUICKSTART.md) for detailed setup instructions once the co
 
 This project is being built from scratch following a structured approach:
 
-**Current Phase**: Phase 0 - Planning ✅ Complete
+**Current Phase**: Phase 0 - Planning (Complete)
 
 **Next Phase**: Phase 1 - Foundation & Security (2 weeks)
 - Electron + React setup
@@ -223,17 +223,17 @@ See [TODO.md](./TODO.md) for the detailed implementation roadmap with all tasks.
 
 This project implements **Security-by-Design** principles:
 
-- ✅ **Context Isolation** in Electron prevents code injection
-- ✅ **Secure IPC Bridge** validates all inter-process communication
-- ✅ **Process Sandboxing** isolates security tool execution
-- ✅ **Input Sanitization** on all user inputs and tool outputs
-- ✅ **Least Privilege** principle for all system operations
+- **Context Isolation** in Electron prevents code injection
+- **Secure IPC Bridge** validates all inter-process communication
+- **Process Sandboxing** isolates security tool execution
+- **Input Sanitization** on all user inputs and tool outputs
+- **Least Privilege** principle for all system operations
 
 ## Documentation
 
-📚 **Complete planning documentation to guide your implementation:**
+**Complete planning documentation to guide your implementation:**
 
-- **[START_HERE.md](./START_HERE.md)** - 🚀 **Begin here!** Quick orientation and first steps
+- **[START_HERE.md](./START_HERE.md)** - **Begin here!** Quick orientation and first steps
 - **[TODO.md](./TODO.md)** - Complete implementation roadmap (200+ tasks across 8 phases)
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Technical architecture and design patterns
 - **[PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)** - Complete directory structure guide
@@ -254,11 +254,11 @@ Built with modern security tools and AI frameworks to advance the field of autom
 
 Special thanks to:
 - The Electron.js team for the secure desktop framework
-- LangChain for LLM orchestration capabilities
+- LangChain for LLM Coordinator capabilities
 - The open-source security community for tools like Nmap, SQLMap, and more
 
 ---
 
-**Status**: 🚧 In Active Development  
+**Status**: In Active Development  
 **Current Phase**: Phase 1 - Foundation & Security  
 **Last Updated**: January 29, 2026

@@ -5,7 +5,7 @@
 
 ---
 
-## 🎯 Project Overview
+## Project Overview
 
 This is a **brand new project** being built from scratch for a dissertation on AI-powered security operations. The old README described an overly complex architecture that has been simplified to a more feasible multi-tiered sidecar design.
 
@@ -20,10 +20,10 @@ This architecture is more manageable for a dissertation project while still demo
 
 ---
 
-## 📁 Documentation Created
+## Documentation Created
 
 ### Planning Documents (6 files)
-1. **TODO.md** - Comprehensive implementation roadmap with 8 phases ⭐ **Most Important**
+1. **TODO.md** - Comprehensive implementation roadmap with 8 phases (Most Important)
 2. **ARCHITECTURE.md** - Technical architecture documentation
 3. **PROJECT_STRUCTURE.md** - Complete directory structure guide
 4. **QUICKSTART.md** - Setup guide for when implementation begins
@@ -136,7 +136,7 @@ This architecture is more manageable for a dissertation project while still demo
 
 ---
 
-## 🏗️ Planned Project Structure
+## Planned Project Structure
 
 ```
 PurpleTeamAI/
@@ -162,7 +162,7 @@ PurpleTeamAI/
 │
 ├── shared/                # TO BUILD: Shared types/schemas
 ├── assets/                # EXISTING: Project assets
-└── [docs]                 # COMPLETE: All documentation ✅
+└── [docs]                 # COMPLETE: All documentation
 ```
 
 **Current Status**: Only documentation and planning files exist. All code will be built following TODO.md.
@@ -328,7 +328,7 @@ normalized = {
 - [x] ai-engine/requirements.txt (created)
 - [x] .gitignore (updated)
 
-### Next to Create (Phase 1) 🔄
+### Next to Create (Phase 1)
 - [ ] frontend/package.json (initialize Electron project)
 - [ ] frontend/src/main/index.ts (Electron main process)
 - [ ] frontend/src/preload/index.ts (secure IPC bridge)

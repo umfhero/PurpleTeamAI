@@ -1,27 +1,27 @@
-# 🚀 START HERE - PurpleTeamAI
+# START HERE - PurpleTeamAI
 
 > **Welcome!** This is a fresh project with complete planning documentation.  
 > **Your mission**: Build an AI-powered security operations platform for your dissertation.
 
 ---
 
-## ✅ What's Already Done
+## What's Already Done
 
-- ✅ **Architecture designed** - Multi-tiered sidecar pattern
-- ✅ **Documentation complete** - 200+ tasks broken down
-- ✅ **Project structure planned** - Clear directory layout
-- ✅ **Configuration templates** - Ready to use
+- **Architecture designed** - Multi-tiered sidecar pattern
+- **Documentation complete** - 200+ tasks broken down
+- **Project structure planned** - Clear directory layout
+- **Configuration templates** - Ready to use
 
 **You have everything you need to start building!**
 
 ---
 
-## 📖 Read These First (In Order)
+## Read These First (In Order)
 
 ### 1. **README.md** (5 minutes)
 Get the big picture - what you're building and why.
 
-### 2. **TODO.md** (15 minutes) ⭐ **MOST IMPORTANT**
+### 2. **TODO.md** (15 minutes) **MOST IMPORTANT**
 Your complete roadmap with 8 phases and 200+ tasks.
 
 **Start with Phase 1: Foundation & Security**
@@ -31,7 +31,7 @@ Understand the technical design before coding.
 
 ---
 
-## 🛠️ Your First Steps (Today)
+## Your First Steps (Today)
 
 ### Step 1: Set Up Your Environment
 
@@ -145,25 +145,25 @@ Open **TODO.md** and work through Phase 1:
 ### Communication Test
 - [ ] Send message from Electron to Python
 - [ ] Receive response back in React UI
-- [ ] Celebrate! 🎉 Your foundation works!
+- [ ] Celebrate! Your foundation works!
 
 ---
 
-## 🎯 Success Criteria for Phase 1
+## Success Criteria for Phase 1
 
 You'll know Phase 1 is complete when:
 
-1. ✅ Electron app launches and shows React UI
-2. ✅ Python sidecar starts automatically
-3. ✅ You can click a button in the UI and get a response from Python
-4. ✅ Context Isolation is enabled (security check)
-5. ✅ No errors in console
+1. Electron app launches and shows React UI
+2. Python sidecar starts automatically
+3. You can click a button in the UI and get a response from Python
+4. Context Isolation is enabled (security check)
+5. No errors in console
 
 **Time estimate**: 1-2 weeks
 
 ---
 
-## 📚 Reference Documents
+## Reference Documents
 
 Keep these open while coding:
 
@@ -174,7 +174,7 @@ Keep these open while coding:
 
 ---
 
-## 💡 Development Tips
+## Development Tips
 
 ### 1. Work in Small Steps
 Don't try to build everything at once. Complete one checkbox in TODO.md, test it, commit it, then move to the next.
@@ -208,7 +208,7 @@ Stuck? Check:
 
 ---
 
-## 🆘 Getting Help
+## Getting Help
 
 ### Common Issues
 
@@ -235,7 +235,7 @@ Stuck? Check:
 
 ---
 
-## 🎓 Learning Resources
+## Learning Resources
 
 ### Electron
 - [Electron Quick Start](https://www.electronjs.org/docs/latest/tutorial/quick-start)
@@ -256,31 +256,31 @@ Stuck? Check:
 
 ---
 
-## 🎯 Your Goal
+## Your Goal
 
 **By the end of this project, you will have:**
 
-✅ A working desktop security application  
-✅ Integration with real security tools (Nmap, SQLMap, etc.)  
-✅ AI-powered analysis using LangChain + GPT-4o  
-✅ Automated vulnerability mapping to OWASP/MITRE  
-✅ A complete dissertation demonstrating AI in cybersecurity  
+- A working desktop security application  
+- Integration with real security tools (Nmap, SQLMap, etc.)  
+- AI-powered analysis using LangChain + GPT-4o  
+- Automated vulnerability mapping to OWASP/MITRE  
+- A complete dissertation demonstrating AI in cybersecurity  
 
 **This is totally achievable in 4 months following the roadmap!**
 
 ---
 
-## 🚀 Ready to Start?
+## Ready to Start?
 
-1. ✅ Read README.md
-2. ✅ Read this file
-3. 📖 Open TODO.md
-4. 💻 Start Phase 1, Task 1
-5. 🎉 Build something amazing!
+1. Read README.md
+2. Read this file
+3. Open TODO.md
+4. Start Phase 1, Task 1
+5. Build something amazing!
 
 ---
 
-**Good luck with your dissertation! You've got this! 💪🛡️**
+**Good luck with your dissertation!**
 
 ---
 
@@ -290,5 +290,5 @@ Stuck? Check:
 - [README.md](./README.md) - Project overview
 - [QUICKSTART.md](./QUICKSTART.md) - Setup reference
 
-**Current Status**: 🟢 Ready to Begin Phase 1  
+**Current Status**: Ready to Begin Phase 1  
 **Last Updated**: January 29, 2026
