@@ -40,19 +40,19 @@ This project bridges the gap between attackers and defenders by integrating thes
 
 PurpleTeamAI employs a **Multi-Tiered "Sidecar" Architecture** designed for security, performance, and AI integration:
 
-### 🎨 Coordinator Layer: Electron.js + React + Tailwind
+### Orchestration Layer: Electron.js + React + Tailwind
 - **Secure IPC Bridge** with Context Isolation to prevent RCE from tool outputs
 - Modern, responsive UI built with React 18 and Tailwind CSS
 - Real-time updates and interactive dashboards
 - Cross-platform desktop application (Windows, macOS, Linux)
 
-### 🔧 Execution Layer: Python Sidecar
+### Execution Layer: Python Sidecar
 - System-level security tool integration (Nmap, Sublist3r, Scapy, SQLMap)
 - Isolated process execution for enhanced security
 - "LLM-Ready" data normalization for raw tool outputs
 - Communication via secure local socket or child process
 
-### 🧠 Reasoning Layer: LangChain + GPT-4o/Ollama
+### Reasoning Layer: LangChain + GPT-4o/Ollama
 - Semantic analysis of security findings
 - Automated MITRE ATT&CK and OWASP Top 10 mapping
 - Risk scoring algorithms based on vulnerability severity
@@ -140,7 +140,7 @@ PurpleTeamAI/
 - **Custom Parsers**: LLM-ready output normalization
 
 ### AI Engine (Reasoning)
-- **LangChain**: LLM Coordinator framework
+- **LangChain**: LLM orchestration framework
 - **GPT-4o**: Advanced reasoning and analysis
 - **Ollama**: Local LLM support (Llama 3, etc.)
 - **Vector Stores**: Semantic search capabilities
@@ -254,7 +254,7 @@ Built with modern security tools and AI frameworks to advance the field of autom
 
 Special thanks to:
 - The Electron.js team for the secure desktop framework
-- LangChain for LLM Coordinator capabilities
+- LangChain for LLM orchestration capabilities
 - The open-source security community for tools like Nmap, SQLMap, and more
 
 ---
