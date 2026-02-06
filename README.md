@@ -25,11 +25,6 @@
 
 </div>
 
-> [!IMPORTANT]
-> **Dissertation Project**: This application is being developed as part of a final year dissertation for the Cybersecurity and Digital Forensics course.
->
-> **Current Status**: Planning phase complete - ready to begin implementation
-
 PurpleTeamAI is a next-generation security operations platform that unifies reconnaissance, red teaming (offensive), and blue teaming (defensive) operations into a single, AI-powered desktop application. Built on a secure multi-tiered "Sidecar" architecture, it combines the power of Electron.js for the interface, Python for system-level security tools, and LangChain with GPT-4o/Ollama for intelligent analysis.
 
 This project bridges the gap between attackers and defenders by integrating these distinct disciplines into one cohesive platform. It covers the entire security lifecycle from reconnaissance to pentesting and active defense, demonstrating how Artificial Intelligence can revolutionize vulnerability analysis, threat detection, and automated remediation through Large Language Models (LLMs).
