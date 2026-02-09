@@ -570,7 +570,7 @@ export async function exportReport(options: ReportOptions): Promise<ReportResult
     // Open in default browser
     shell.openPath(result.filePath)
     
-    return { success: true, filePath: result.filePath }
+    return { success: true, filePath: result.filePath, reportId: metadata.id }
   } catch (error) {
     console.error('[Report] Export failed:', error)
     return { 

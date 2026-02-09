@@ -124,6 +124,7 @@ export interface ReportOptions {
 export interface ReportResult {
   success: boolean
   filePath?: string
+  reportId?: string
   error?: string
 }
 

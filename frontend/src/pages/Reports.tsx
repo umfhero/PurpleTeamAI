@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { FileText, FileDown, ArrowRight, ExternalLink, Trash2, Loader2, AlertTriangle, Shield } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import type { ReportMetadata } from '../types/electron.d'
+import { FileText, ArrowRight, Loader2, AlertTriangle, FileDown, Calendar, ChevronRight } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import type { NmapScanData } from '../types/electron.d'
+import ReportViewer from '../components/ReportViewer'
 
-// Get grade color
+// Get grade color based on security grade
 function getGradeColor(grade?: string): string {
   if (!grade) return 'text-muted-foreground'
   if (grade === 'A+' || grade === 'A') return 'text-[oklch(0.55_0.15_150)]'
@@ -13,44 +14,63 @@ function getGradeColor(grade?: string): string {
 }
 
 export default function Reports() {
-  const [reports, setReports] = useState<ReportMetadata[]>([])
+  const location = useLocation()
+  const [scanHistory, setScanHistory] = useState<NmapScanData[]>([])
+  const [selectedScan, setSelectedScan] = useState<NmapScanData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [deleting, setDeleting] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
-    loadReports()
+    loadScanHistory()
   }, [])
 
-  const loadReports = async () => {
+  // Auto-select scan from navigation state
+  useEffect(() => {
+    const state = location.state as { scanTimestamp?: string } | null
+    if (state?.scanTimestamp && scanHistory.length > 0) {
+      const scan = scanHistory.find(s => s.timestamp === state.scanTimestamp)
+      if (scan) {
+        setSelectedScan(scan)
+      }
+    }
+  }, [location.state, scanHistory])
+
+  const loadScanHistory = async () => {
     try {
-      if (window.electronAPI?.report) {
-        const history = await window.electronAPI.report.getHistory()
-        setReports(history)
+      if (window.electronAPI?.scanner) {
+        const scans = await window.electronAPI.scanner.getHistory()
+        setScanHistory(scans)
+        
+        // Check if we should auto-select from navigation state
+        const state = location.state as { scanTimestamp?: string } | null
+        if (state?.scanTimestamp) {
+          const scan = scans.find(s => s.timestamp === state.scanTimestamp)
+          if (scan) {
+            setSelectedScan(scan)
+          } else if (scans.length > 0) {
+            setSelectedScan(scans[0])
+          }
+        } else if (scans.length > 0) {
+          setSelectedScan(scans[0])
+        }
       }
     } catch (error) {
-      console.error('Failed to load reports:', error)
+      console.error('Failed to load scan history:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleOpenReport = async (id: string) => {
-    if (window.electronAPI?.report) {
-      await window.electronAPI.report.open(id)
-    }
-  }
-
-  const handleDeleteReport = async (id: string) => {
-    if (!window.electronAPI?.report) return
+  const handleExportReport = async () => {
+    if (!selectedScan || !window.electronAPI?.report) return
     
-    setDeleting(id)
+    setExporting(true)
     try {
-      const success = await window.electronAPI.report.delete(id, false)
-      if (success) {
-        setReports(prev => prev.filter(r => r.id !== id))
-      }
+      await window.electronAPI.report.export(selectedScan, 'html')
+    } catch (error) {
+      console.error('Export failed:', error)
     } finally {
-      setDeleting(null)
+      setExporting(false)
     }
   }
 
@@ -64,163 +84,131 @@ export default function Reports() {
 
   return (
     <div className="flex h-full">
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Report List */}
-        {reports.length > 0 ? (
+      {/* Sidebar - Scan History */}
+      <aside className="w-72 border-r border-border bg-card flex flex-col overflow-hidden">
+        <div className="p-4 border-b border-border">
+          <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+            Scan History ({scanHistory.length})
+          </h3>
+        </div>
+        
+        {scanHistory.length > 0 ? (
           <div className="flex-1 overflow-auto">
-            <div className="p-4 border-b border-border bg-muted/20">
-              <h3 className="text-sm font-mono uppercase tracking-wider text-muted-foreground">
-                Exported Reports ({reports.length})
-              </h3>
-            </div>
-            <div className="divide-y divide-border">
-              {reports.map((report) => (
-                <div
-                  key={report.id}
-                  className="p-4 hover:bg-muted/30 transition-colors"
+            {scanHistory.map((scan) => {
+              const isSelected = selectedScan?.timestamp === scan.timestamp
+              const vulnCount = scan.vulnerabilities.length
+              const criticalCount = scan.vulnerabilities.filter(v => v.severity === 'critical').length
+              const highCount = scan.vulnerabilities.filter(v => v.severity === 'high').length
+              
+              return (
+                <button
+                  key={scan.timestamp}
+                  onClick={() => setSelectedScan(scan)}
+                  className={`w-full text-left p-3 border-b border-border transition-colors ${
+                    isSelected 
+                      ? 'bg-primary/10 border-l-2 border-l-primary' 
+                      : 'hover:bg-muted/30'
+                  }`}
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-primary flex-shrink-0" />
-                        <div className="min-w-0">
-                          <div className="font-mono font-semibold truncate">
-                            {report.target}
-                          </div>
-                          <div className="text-xs text-muted-foreground font-mono mt-0.5">
-                            Exported {new Date(report.exportedAt).toLocaleString()}
-                          </div>
-                        </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-mono text-sm font-semibold truncate">
+                        {scan.target}
                       </div>
-                      
-                      {/* Stats Row */}
-                      <div className="flex items-center gap-4 mt-3 text-xs font-mono">
-                        <div className="flex items-center gap-1.5">
-                          <Shield className="w-3.5 h-3.5 text-primary" />
-                          <span className={getGradeColor(report.grade)}>
-                            {report.grade || '—'}{report.securityScore !== undefined ? ` (${report.securityScore}%)` : ''}
+                      <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground font-mono">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(scan.timestamp).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-[10px] font-mono ${getGradeColor(scan.securityScore?.grade)}`}>
+                          {scan.securityScore?.grade || '—'}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          {vulnCount} vuln{vulnCount !== 1 ? 's' : ''}
+                        </span>
+                        {criticalCount > 0 && (
+                          <span className="text-[10px] text-[oklch(0.55_0.22_25)] font-mono">
+                            {criticalCount}C
                           </span>
-                        </div>
-                        <span className="text-muted-foreground">
-                          {report.vulnerabilityCount} vulnerabilities
-                        </span>
-                        <span className="text-muted-foreground">
-                          {report.format.toUpperCase()}
-                        </span>
-                      </div>
-                      
-                      {/* File Path */}
-                      <div className="text-[10px] text-muted-foreground/60 font-mono mt-2 truncate">
-                        {report.filePath}
-                      </div>
-                    </div>
-                    
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => handleOpenReport(report.id)}
-                        className="p-2 border border-border hover:border-primary hover:text-primary transition-colors"
-                        title="Open Report"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteReport(report.id)}
-                        disabled={deleting === report.id}
-                        className="p-2 border border-border hover:border-[hsl(var(--critical))] hover:text-[hsl(var(--critical))] transition-colors disabled:opacity-50"
-                        title="Remove from history"
-                      >
-                        {deleting === report.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
                         )}
-                      </button>
+                        {highCount > 0 && (
+                          <span className="text-[10px] text-[oklch(0.65_0.25_45)] font-mono">
+                            {highCount}H
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    {isSelected && <ChevronRight className="w-4 h-4 text-primary flex-shrink-0" />}
                   </div>
-                </div>
-              ))}
-            </div>
+                </button>
+              )
+            })}
           </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center p-4">
+            <p className="text-xs text-muted-foreground text-center font-mono">
+              No scans available
+            </p>
+          </div>
+        )}
+      </aside>
+
+      {/* Main Content - Report View */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {selectedScan ? (
+          <>
+            {/* Report Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border bg-muted/20">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-primary" />
+                <div>
+                  <h2 className="font-mono font-semibold">{selectedScan.target}</h2>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    {new Date(selectedScan.timestamp).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleExportReport}
+                disabled={exporting}
+                className="flex items-center gap-2 px-4 py-2 border border-border hover:border-primary 
+                         hover:text-primary transition-colors font-mono text-xs uppercase tracking-wider
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {exporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FileDown className="w-4 h-4" />
+                )}
+                Export HTML
+              </button>
+            </div>
+
+            {/* Report Content */}
+            <div className="flex-1 overflow-auto">
+              <ReportViewer scan={selectedScan} />
+            </div>
+          </>
         ) : (
           /* Empty State */
           <div className="flex-1 flex items-center justify-center p-6">
             <div className="text-center max-w-md">
               <AlertTriangle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Reports Yet</h3>
+              <h3 className="text-lg font-semibold mb-2">No Scans Available</h3>
               <p className="text-muted-foreground text-sm font-mono mb-6">
-                Export a security report from the Results Dashboard to see it here.
+                Run a scan from the Scan Target page to generate security reports.
               </p>
               <Link
-                to="/dashboard"
+                to="/scan"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground 
                            font-mono uppercase tracking-wider border border-primary hover:bg-primary/90 transition-colors"
               >
-                Go to Results <ArrowRight className="w-4 h-4" />
+                Start Scanning <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
         )}
       </div>
-
-      {/* Sidebar - How to Export */}
-      <aside className="w-72 border-l border-border bg-card flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-border">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-            How to Export
-          </h3>
-        </div>
-        <div className="flex-1 p-4 space-y-4 text-sm">
-          <div className="flex gap-3">
-            <div className="w-6 h-6 border border-primary/50 bg-primary/10 flex items-center justify-center text-primary font-mono text-xs font-bold flex-shrink-0">
-              1
-            </div>
-            <div>
-              <p className="font-semibold text-xs">Go to Results</p>
-              <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                View your scan history
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex gap-3">
-            <div className="w-6 h-6 border border-primary/50 bg-primary/10 flex items-center justify-center text-primary font-mono text-xs font-bold flex-shrink-0">
-              2
-            </div>
-            <div>
-              <p className="font-semibold text-xs">Select Scan</p>
-              <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                Choose from sidebar
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex gap-3">
-            <div className="w-6 h-6 border border-primary/50 bg-primary/10 flex items-center justify-center text-primary font-mono text-xs font-bold flex-shrink-0">
-              3
-            </div>
-            <div>
-              <p className="font-semibold text-xs">Click Export</p>
-              <p className="text-xs text-muted-foreground font-mono mt-0.5 flex items-center gap-1">
-                Use the <FileDown className="w-3 h-3 inline" /> button
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Report Contents Info */}
-        <div className="border-t border-border p-4">
-          <h4 className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-3">Report Includes</h4>
-          <div className="space-y-1.5 text-xs font-mono text-muted-foreground">
-            <div>• Executive Summary</div>
-            <div>• Security Score & Grade</div>
-            <div>• OWASP Coverage Matrix</div>
-            <div>• Vulnerability Details</div>
-            <div>• AI Remediation Steps</div>
-          </div>
-        </div>
-      </aside>
     </div>
   )
 }

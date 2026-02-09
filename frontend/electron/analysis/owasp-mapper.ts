@@ -133,11 +133,11 @@ export function getOWASPCoverage(vulnerabilities: VulnerabilityResult[]): {
   const mappings = mapAllVulnerabilities(vulnerabilities)
   const uniqueCategories = new Set<OWASPCategory>()
 
-  // Only count high-confidence mappings for coverage
+  // Count ANY mapping (use highest confidence mapping per vulnerability)
   for (const mapping of mappings) {
-    const highConfidenceMapping = mapping.owaspMappings.find(m => m.confidence === 'high')
-    if (highConfidenceMapping) {
-      uniqueCategories.add(highConfidenceMapping.category)
+    if (mapping.owaspMappings.length > 0) {
+      // owaspMappings is already sorted by confidence (high > medium > low)
+      uniqueCategories.add(mapping.owaspMappings[0].category)
     }
   }
 

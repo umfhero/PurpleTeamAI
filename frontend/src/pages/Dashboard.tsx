@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { AlertTriangle, Target, Search, Shield, Zap, ChevronDown, ChevronRight, FileDown, Loader2 } from 'lucide-react'
+import { AlertTriangle, Target, Search, Shield, Zap, ChevronDown, ChevronRight, FileText } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import type { NmapScanData, VulnerabilityResult } from '../types/electron.d'
 import SecurityScoreCard from '../components/SecurityScoreCard'
 import OWASPCoverageMatrix from '../components/OWASPCoverageMatrix'
@@ -64,6 +65,7 @@ const getScanStats = (scan: NmapScanData) => {
 }
 
 export default function Dashboard() {
+    const navigate = useNavigate()
     const [scanHistory, setScanHistory] = useState<NmapScanData[]>([])
     const [selectedScan, setSelectedScan] = useState<NmapScanData | null>(null)
     const [sortField, setSortField] = useState<SortField>('severity')
@@ -71,7 +73,6 @@ export default function Dashboard() {
     const [searchTerm, setSearchTerm] = useState('')
     const [loading, setLoading] = useState(true)
     const [expandedOutputs, setExpandedOutputs] = useState<Set<string>>(new Set())
-    const [exporting, setExporting] = useState(false)
 
     const toggleOutput = (vulnId: string) => {
         setExpandedOutputs(prev => {
@@ -85,25 +86,10 @@ export default function Dashboard() {
         })
     }
 
-    const handleExportReport = async () => {
-        if (!selectedScan || exporting) return
-        
-        setExporting(true)
-        try {
-            if (window.electronAPI?.report) {
-                const result = await window.electronAPI.report.export({
-                    scan: selectedScan,
-                    format: 'html',
-                })
-                if (!result.success && result.error !== 'Export cancelled') {
-                    console.error('Export failed:', result.error)
-                }
-            }
-        } catch (error) {
-            console.error('Export error:', error)
-        } finally {
-            setExporting(false)
-        }
+    const handleViewReport = () => {
+        if (!selectedScan) return
+        // Navigate to Reports page with the selected scan timestamp
+        navigate('/reports', { state: { scanTimestamp: selectedScan.timestamp } })
     }
 
     useEffect(() => {
@@ -246,17 +232,13 @@ export default function Dashboard() {
                 <div className="px-3 py-2 border-b border-border flex items-center justify-between">
                     <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Scan History</h3>
                     <button
-                        onClick={handleExportReport}
-                        disabled={!selectedScan || exporting}
+                        onClick={handleViewReport}
+                        disabled={!selectedScan}
                         className="p-1.5 text-muted-foreground hover:text-primary hover:bg-muted/50 
                                    transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Export Report"
+                        title="View Report"
                     >
-                        {exporting ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <FileDown className="w-4 h-4" />
-                        )}
+                        <FileText className="w-4 h-4" />
                     </button>
                 </div>
                 <div className="flex-1 overflow-auto">
