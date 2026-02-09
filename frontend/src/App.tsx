@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
+import ScanTarget from './pages/ScanTarget'
 
 const queryClient = new QueryClient()
 
@@ -11,8 +12,9 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route index element={<Navigate to="/scan" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="scan" element={<ScanTarget />} />
             {/* Add more routes here */}
           </Route>
         </Routes>

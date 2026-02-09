@@ -46,8 +46,6 @@ Additionally, the system maps all discovered vulnerabilities to **OWASP Top 10**
 
 ## Architecture
 
-<img src="assets/Smallerbanner.png" alt="PurpleTeamAI Architecture" width="100%" />
-
 The implementation consists of a cross-platform **Electron** desktop application with a **React**-based user interface, backed by a **Node.js** runtime that orchestrates security tooling.
 
 ### Scanning Pipeline
@@ -180,23 +178,8 @@ This project spans **10 weeks** from development start to final submission (Apri
 | **Week 9** (Apr 6)   | Dissertation writing + screencast recording                                       |
 | **Week 10** (Apr 13) | Final polish + submission (deadline: April 24)                                    |
 
-See [TODO.md](./TODO.md) for the detailed weekly breakdown with all tasks.
-
-### Deliverables
-
-- 8,000-word dissertation following academic conventions
-- 15–20 minute screencast demonstration of the working application
-- Complete source code with documentation published to a public GitHub repository
 
 ---
-
-## Contributing
-
-This is a dissertation project, but feedback and suggestions are welcome. Please open an issue to discuss potential improvements.
-
-## License
-
-[Add your license here]
 
 ## Acknowledgements
 

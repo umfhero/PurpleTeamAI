@@ -10,9 +10,9 @@
 
 > **Goal**: Dev environment fully working, Electron shell running, scanning safe targets confirmed.
 
-- [x] Install & verify: Node.js 18+, Nmap, Docker, Git _(Node.js ✓, Git ✓ — Nmap & Docker need manual install)_
-- [ ] Spin up Kali Linux VM — confirm Nmap runs against `testphp.vulnweb.com`
-- [ ] Deploy Mutillidae in Docker (`docker pull citizenstig/nowasp`) — confirm accessible on localhost
+- [x] Install & verify: Node.js 18+, Nmap, Docker, Git _(All installed ✓)_
+- [ ] Spin up Kali Linux VM — confirm Nmap runs against `testphp.vulnweb.com` _(deferred — using Windows Nmap)_
+- [ ] Deploy Mutillidae in Docker (`docker pull citizenstig/nowasp`) — confirm accessible on localhost _(deferred)_
 - [x] Scaffold Electron into the existing `frontend/` — integrate `electron-builder` + Vite
   - Main process (`electron/main.ts`), preload script, renderer is current React app
 - [x] Confirm `npm run dev` launches the Electron window with the React app inside

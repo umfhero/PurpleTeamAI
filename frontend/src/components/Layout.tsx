@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Shield, Crosshair, Search, Settings, Menu } from 'lucide-react'
+import { LayoutDashboard, Crosshair, FileText, Settings, Menu } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useState } from 'react'
 
@@ -8,15 +8,14 @@ export default function Layout() {
     const [sidebarOpen, setSidebarOpen] = useState(true)
 
     const navItems = [
-        { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-        { name: 'Recon', path: '/recon', icon: Search },
-        { name: 'Pentest', path: '/pentest', icon: Crosshair },
-        { name: 'Defense', path: '/defense', icon: Shield },
+        { name: 'Scan', path: '/scan', icon: Crosshair },
+        { name: 'Results', path: '/dashboard', icon: LayoutDashboard },
+        { name: 'Reports', path: '/reports', icon: FileText },
         { name: 'Settings', path: '/settings', icon: Settings },
     ]
 
     return (
-        <div className="flex h-screen bg-background text-foreground overflow-hidden">
+        <div className="flex h-screen bg-background text-foreground overflow-hidden grain">
             {/* Sidebar */}
             <aside
                 className={cn(
@@ -25,9 +24,9 @@ export default function Layout() {
                 )}
             >
                 <div className="p-4 flex items-center justify-between border-b border-border h-16">
-                    {sidebarOpen && <span className="font-bold text-xl text-primary">PurpleTeamAI</span>}
-                    <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 hover:bg-accent rounded">
-                        <Menu size={20} />
+                    {sidebarOpen && <span className="font-bold text-xl text-primary tracking-tight">PURPLE<span className="text-foreground">TEAM</span></span>}
+                    <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-muted border border-transparent hover:border-border">
+                        <Menu size={18} />
                     </button>
                 </div>
 
@@ -40,31 +39,38 @@ export default function Layout() {
                                 key={item.path}
                                 to={item.path}
                                 className={cn(
-                                    "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
+                                    "flex items-center gap-3 px-3 py-2 border border-transparent transition-colors font-mono text-sm uppercase tracking-wider",
                                     isActive
-                                        ? "bg-primary text-primary-foreground"
-                                        : "hover:bg-accent hover:text-accent-foreground"
+                                        ? "bg-primary text-primary-foreground border-primary shadow-brutal-orange"
+                                        : "hover:bg-muted hover:border-border"
                                 )}
                             >
-                                <Icon size={20} />
+                                <Icon size={18} />
                                 {sidebarOpen && <span>{item.name}</span>}
                             </Link>
                         )
                     })}
                 </nav>
+                
+                {/* Version info */}
+                {sidebarOpen && (
+                    <div className="p-4 border-t border-border text-xs font-mono text-muted-foreground">
+                        v1.0.0-dev
+                    </div>
+                )}
             </aside>
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col overflow-hidden">
                 <header className="h-16 border-b border-border bg-card flex items-center px-6 justify-between">
-                    <h1 className="text-lg font-semibold">
-                        {navItems.find(i => location.pathname.startsWith(i.path))?.name || 'Dashboard'}
+                    <h1 className="text-xl tracking-tight">
+                        {navItems.find(i => location.pathname.startsWith(i.path))?.name || 'Scan'}
                     </h1>
                     <div className="flex items-center gap-4">
-                        {/* User profile or other header items */}
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                            U
+                        <div className="text-xs font-mono text-muted-foreground">
+                            READY
                         </div>
+                        <div className="w-2 h-2 bg-[hsl(var(--low))]" />
                     </div>
                 </header>
 
