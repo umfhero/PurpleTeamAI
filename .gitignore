@@ -1,33 +1,4 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-.pytest_cache/
-.coverage
-htmlcov/
-.mypy_cache/
-
-# Node
+# Dependencies
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -35,12 +6,20 @@ yarn-error.log*
 .pnpm-debug.log*
 package-lock.json
 
-# Frontend Build
+# Build outputs
 frontend/dist/
 frontend/dist-electron/
 frontend/out/
 frontend/.vite/
 frontend/.cache/
+
+# Electron
+*.asar
+*.dmg
+*.exe
+*.deb
+*.rpm
+*.AppImage
 
 # Environment
 .env
@@ -61,42 +40,28 @@ frontend/.cache/
 Thumbs.db
 desktop.ini
 *.lnk
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
+ehthumbs.db
+ehthumbs_vista.db
+$RECYCLE.BIN/
+.directory
+.Trash-*
+.AppleDouble
+.LSOverride
+Icon
+._*
 
 # Logs
 *.log
 logs/
 *.log.*
 
-# Docker
-docker-compose.override.yml
-
-# AI Engine
-ai-engine/data/
-ai-engine/reports/
-ai-engine/models/
-ai-engine/.cache/
-
-# Backend Sidecar
-backend-sidecar/data/
-backend-sidecar/scans/
-backend-sidecar/.cache/
-
-# Vector Stores
-*.chroma/
-chroma_data/
-
-# Temporary Files
+# Temporary files
 *.tmp
 *.temp
 *.bak
 *.backup
 
-# Security
+# Security / secrets
 *.key
 *.pem
 *.crt
@@ -104,37 +69,7 @@ chroma_data/
 secrets/
 credentials/
 
-# Test Coverage
-.coverage
-coverage.xml
-*.cover
-.hypothesis/
-
-# Electron
-*.asar
-*.dmg
-*.exe
-*.deb
-*.rpm
-*.AppImage
-
-# macOS
-.AppleDouble
-.LSOverride
-Icon
-._*
-
-# Windows
-ehthumbs.db
-ehthumbs_vista.db
-[Dd]esktop.ini
-$RECYCLE.BIN/
-
-# Linux
-.directory
-.Trash-*
-
-# Scan Results (large files)
+# Scan results (large files)
 scan_results/
 *.pcap
 *.cap
@@ -142,3 +77,9 @@ scan_results/
 # Reports
 reports/*.pdf
 reports/*.html
+
+# Test coverage
+.coverage
+coverage/
+*.cover
+.hypothesis/
