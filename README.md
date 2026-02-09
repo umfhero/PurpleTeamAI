@@ -165,15 +165,22 @@ Tracks how comprehensively the framework identifies vulnerabilities across the O
 
 ## Project Timeline
 
-This project spans **14 weeks** from proposal submission to final deliverable:
+This project spans **10 weeks** from development start to final submission (April 24, 2026):
 
-| Phase           | Focus                                                    |
-| --------------- | -------------------------------------------------------- |
-| **Weeks 1–3**   | Literature review, scanning pipeline, JSON normalization |
-| **Weeks 4–6**   | Electron UI development, concurrent reporting features   |
-| **Weeks 7–9**   | LLM module implementation, OWASP mapping                 |
-| **Weeks 10–12** | Testing against VulnWeb & Mutillidae, metric collection  |
-| **Weeks 13–14** | Final documentation, screencast, and submission          |
+| Week                 | Focus                                                                             |
+| -------------------- | --------------------------------------------------------------------------------- |
+| **Week 1** (Feb 9)   | Foundation — Electron shell, Nmap verified, Mutillidae in Docker                  |
+| **Week 2** (Feb 16)  | Scanning pipeline — target input, Nmap orchestration, JSON normalization          |
+| **Week 3** (Feb 23)  | Results dashboard — vulnerability table, scan history, literature review complete |
+| **Week 4** (Mar 2)   | LLM integration — Gemini API analysis, remediation guidance                       |
+| **Week 5** (Mar 9)   | OWASP mapping + security score (0–100%)                                           |
+| **Week 6** (Mar 16)  | Report export + UI polish (brutalist design system)                               |
+| **Week 7** (Mar 23)  | Testing both targets, Ollama fallback, accuracy validation                        |
+| **Week 8** (Mar 30)  | Evaluation metrics — classification, remediation quality, OWASP coverage          |
+| **Week 9** (Apr 6)   | Dissertation writing + screencast recording                                       |
+| **Week 10** (Apr 13) | Final polish + submission (deadline: April 24)                                    |
+
+See [TODO.md](./TODO.md) for the detailed weekly breakdown with all tasks.
 
 ### Deliverables
 

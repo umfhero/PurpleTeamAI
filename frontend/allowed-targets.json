@@ -1,0 +1,28 @@
+{
+  "$schema": "./allowed-targets.schema.json",
+  "description": "Allowlist of targets that can be scanned. Only these domains/IPs are permitted.",
+  "targets": [
+    {
+      "pattern": "testphp.vulnweb.com",
+      "type": "domain",
+      "description": "Acunetix public vulnerable web application for testing"
+    },
+    {
+      "pattern": "localhost",
+      "type": "localhost",
+      "description": "Local machine - for testing local vulnerable apps like Mutillidae"
+    },
+    {
+      "pattern": "127.0.0.1",
+      "type": "localhost",
+      "description": "Local machine (IPv4 loopback)"
+    },
+    {
+      "pattern": "::1",
+      "type": "localhost",
+      "description": "Local machine (IPv6 loopback)"
+    }
+  ],
+  "strictMode": true,
+  "requireConfirmation": true
+}
