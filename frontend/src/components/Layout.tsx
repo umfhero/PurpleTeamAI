@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Crosshair, FileText, Settings, Menu } from 'lucide-react'
+import { LayoutDashboard, Crosshair, FileText, Menu } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useState } from 'react'
 
@@ -11,11 +11,10 @@ export default function Layout() {
         { name: 'Scan', path: '/scan', icon: Crosshair },
         { name: 'Results', path: '/dashboard', icon: LayoutDashboard },
         { name: 'Reports', path: '/reports', icon: FileText },
-        { name: 'Settings', path: '/settings', icon: Settings },
     ]
 
     return (
-        <div className="flex h-screen bg-background text-foreground overflow-hidden grain">
+        <div className="flex h-screen bg-background text-foreground overflow-hidden">
             {/* Sidebar */}
             <aside
                 className={cn(
@@ -24,7 +23,7 @@ export default function Layout() {
                 )}
             >
                 <div className="p-4 flex items-center justify-between border-b border-border h-16">
-                    {sidebarOpen && <span className="font-bold text-xl text-primary tracking-tight">PURPLE<span className="text-foreground">TEAM</span></span>}
+                    {sidebarOpen && <span className="font-bold text-xl text-primary tracking-tight">PURPLETEAM <span className="text-foreground">SUITE</span></span>}
                     <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-muted border border-transparent hover:border-border">
                         <Menu size={18} />
                     </button>
@@ -41,7 +40,7 @@ export default function Layout() {
                                 className={cn(
                                     "flex items-center gap-3 px-3 py-2 border border-transparent transition-colors font-mono text-sm uppercase tracking-wider",
                                     isActive
-                                        ? "bg-primary text-primary-foreground border-primary shadow-brutal-orange"
+                                        ? "bg-primary text-primary-foreground border-primary"
                                         : "hover:bg-muted hover:border-border"
                                 )}
                             >
@@ -74,7 +73,7 @@ export default function Layout() {
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-auto p-6">
+                <div className="flex-1 overflow-auto">
                     <Outlet />
                 </div>
             </main>

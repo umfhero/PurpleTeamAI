@@ -1,84 +1,119 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  :root {
-    /* Brutalist Dark Theme - Earth Tones + Safety Orange */
-    --background: 0 0% 4%;           /* Near black */
-    --foreground: 40 6% 90%;         /* Warm off-white */
-    --card: 0 0% 7%;                 /* Dark grey */
-    --card-foreground: 40 6% 90%;
-    --popover: 0 0% 7%;
-    --popover-foreground: 40 6% 90%;
-    --primary: 24 100% 50%;          /* Safety Orange */
-    --primary-foreground: 0 0% 4%;
-    --secondary: 35 30% 15%;         /* Earth brown */
-    --secondary-foreground: 40 6% 90%;
-    --muted: 0 0% 14%;               /* Muted grey */
-    --muted-foreground: 40 6% 60%;
-    --accent: 24 100% 50%;           /* Safety Orange accent */
-    --accent-foreground: 0 0% 4%;
-    --destructive: 0 72% 51%;        /* Red */
-    --destructive-foreground: 40 6% 90%;
-    --border: 0 0% 20%;              /* Visible border */
-    --input: 0 0% 12%;
-    --ring: 24 100% 50%;
-    --radius: 0px;                   /* NO rounded corners */
-    
-    /* Severity colours */
-    --critical: 0 72% 51%;           /* Red */
-    --high: 24 100% 50%;             /* Orange */
-    --medium: 45 93% 47%;            /* Amber */
-    --low: 142 76% 36%;              /* Green */
-    --info: 40 6% 60%;               /* Grey */
-  }
+@theme {
+  /* Dark Theme with Light Purple Accent */
+  --color-background: oklch(0.15 0 0);           /* Near black */
+  --color-foreground: oklch(0.88 0.015 80);      /* Warm off-white */
+  --color-card: oklch(0.20 0 0);                 /* Dark grey */
+  --color-card-foreground: oklch(0.88 0.015 80);
+  --color-popover: oklch(0.20 0 0);
+  --color-popover-foreground: oklch(0.88 0.015 80);
+  --color-primary: oklch(0.75 0.15 290);         /* Light Purple */
+  --color-primary-foreground: oklch(0.15 0 0);
+  --color-secondary: oklch(0.30 0.05 60);        /* Earth brown */
+  --color-secondary-foreground: oklch(0.88 0.015 80);
+  --color-muted: oklch(0.35 0 0);                /* Muted grey */
+  --color-muted-foreground: oklch(0.60 0.015 80);
+  --color-accent: oklch(0.75 0.15 290);          /* Light Purple accent */
+  --color-accent-foreground: oklch(0.15 0 0);
+  --color-destructive: oklch(0.55 0.22 25);      /* Red */
+  --color-destructive-foreground: oklch(0.88 0.015 80);
+  --color-border: oklch(0.40 0 0);               /* Visible border */
+  --color-input: oklch(0.25 0 0);
+  --color-ring: oklch(0.75 0.15 290);
+  
+  /* Severity colours */
+  --color-critical: oklch(0.55 0.22 25);         /* Red */
+  --color-high: oklch(0.65 0.25 45);             /* Orange */
+  --color-medium: oklch(0.70 0.15 85);           /* Amber */
+  --color-low: oklch(0.55 0.15 150);             /* Green */
+  --color-info: oklch(0.60 0.015 80);            /* Grey */
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: theme(colors.border);
     border-radius: 0 !important;     /* Force 0px corners everywhere */
   }
   
   body {
-    @apply bg-background text-foreground;
+    background-color: theme(colors.background);
+    color: theme(colors.foreground);
     font-family: 'JetBrains Mono', monospace;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', serif;
+    font-family: 'JetBrains Mono', monospace;
     font-weight: 600;
   }
-}
 
-/* Brutalist shadows - hard offset, no blur */
-@layer utilities {
-  .shadow-brutal {
-    box-shadow: 4px 4px 0px 0px hsl(var(--border));
+  /* Custom Scrollbar - dark theme with purple accent */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
   
-  .shadow-brutal-lg {
-    box-shadow: 6px 6px 0px 0px hsl(var(--border));
+  ::-webkit-scrollbar-track {
+    background: oklch(0.18 0 0);
+    border: 1px solid oklch(0.25 0 0);
   }
   
-  .shadow-brutal-orange {
-    box-shadow: 4px 4px 0px 0px hsl(var(--primary));
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.35 0.05 290);
+    border: 1px solid oklch(0.40 0.08 290);
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.50 0.12 290);
+  }
+  
+  ::-webkit-scrollbar-corner {
+    background: oklch(0.18 0 0);
   }
 }
 
-/* Film grain overlay */
-.grain::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  opacity: 0.03;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E");
-  z-index: 9999;
+/* Staggered reveal animations for scan progress */
+@keyframes stagger-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes progress-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes log-line-appear {
+  0% {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-stagger-in {
+  animation: stagger-fade-in 0.3s ease-out forwards;
+}
+
+.animate-progress-pulse {
+  animation: progress-pulse 1.5s ease-in-out infinite;
+}
+
+.animate-log-line {
+  animation: log-line-appear 0.15s ease-out forwards;
 }

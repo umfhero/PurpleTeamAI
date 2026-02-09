@@ -1,5 +1,5 @@
 {
-  "name": "purpleteamai",
+  "name": "purpleteam-suite",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -16,6 +16,7 @@
     "autoprefixer": "^10.4.22",
     "axios": "^1.13.2",
     "clsx": "^2.1.1",
+    "dotenv": "^17.2.4",
     "lucide-react": "^0.555.0",
     "postcss": "^8.5.6",
     "react": "^19.2.0",
@@ -28,9 +29,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
+    "@types/xml2js": "^0.4.14",
     "@vitejs/plugin-react": "^5.1.1",
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0",
@@ -38,6 +41,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "sharp": "^0.34.5",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
@@ -45,8 +49,8 @@
     "vite-plugin-electron-renderer": "^0.14.5"
   },
   "build": {
-    "appId": "com.purpleteamai.app",
-    "productName": "PurpleTeamAI",
+    "appId": "com.purpleteamsuite.app",
+    "productName": "PurpleTeam Suite",
     "directories": {
       "output": "release"
     },

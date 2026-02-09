@@ -7,6 +7,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
     runNmap: (target: string) => ipcRenderer.invoke('scanner:run-nmap', target),
     getHistory: () => ipcRenderer.invoke('scanner:get-history'),
     validateTarget: (target: string) => ipcRenderer.invoke('scanner:validate-target', target),
+    abort: () => ipcRenderer.invoke('scanner:abort'),
+    onProgress: (callback: (line: string) => void) => {
+      const listener = (_event: unknown, line: string) => callback(line)
+      ipcRenderer.on('scanner:progress', listener)
+      // Return cleanup function
+      return () => ipcRenderer.removeListener('scanner:progress', listener)
+    },
+  },
+
+  // LLM APIs
+  llm: {
+    analyzeVulnerabilities: (request: unknown) => ipcRenderer.invoke('llm:analyze-vulnerabilities', request),
+  },
+
+  // Report APIs
+  report: {
+    export: (options: unknown) => ipcRenderer.invoke('report:export', options),
+    getHistory: () => ipcRenderer.invoke('report:get-history'),
+    open: (id: string) => ipcRenderer.invoke('report:open', id),
+    delete: (id: string, deleteFile: boolean) => ipcRenderer.invoke('report:delete', id, deleteFile),
   },
 
   // App info

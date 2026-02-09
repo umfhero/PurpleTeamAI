@@ -1,8 +1,26 @@
-import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { config } from 'dotenv'
+import { runNmapScan, getScanHistory, validateTarget, abortScan } from './scanner'
+import { GeminiClient } from './llm'
+import { exportReport } from './reports'
+import type { LLMAnalysisRequest } from './llm'
+import type { ReportOptions } from './reports'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Load environment variables from .env file in the project root
+// In development, .env is at project root (two levels up from dist-electron)
+// In production, it should be bundled or use a different approach
+const envPath = app.isPackaged 
+  ? path.join(process.resourcesPath, '.env')
+  : path.join(__dirname, '../../.env')
+
+config({ path: envPath })
+
+console.log('[Main] Environment loaded from:', envPath)
+console.log('[Main] GEMINI_API_KEY present:', !!process.env.GEMINI_API_KEY)
 
 // Paths
 const RENDERER_DIST = path.join(__dirname, '../dist')
@@ -11,15 +29,22 @@ const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
 let mainWindow: BrowserWindow | null = null
 
 function createWindow() {
+  // Icon path for both dev and production
+  const iconPath = VITE_DEV_SERVER_URL 
+    ? path.join(__dirname, '../public/icon.png')
+    : path.join(process.resourcesPath, 'icon.png')
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1000,
     minHeight: 700,
-    title: 'PurpleTeamAI',
+    title: 'PurpleTeam Suite',
     backgroundColor: '#0a0a0a',
+    autoHideMenuBar: true, // Hide menu bar (File, Edit, View, etc.)
+    icon: iconPath,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false, // Required for preload to work with IPC
@@ -75,26 +100,119 @@ app.on('window-all-closed', () => {
 })
 
 // ============================================
-// IPC Handlers - Scanner integration goes here
+// IPC Handlers - Scanner integration
 // ============================================
 
-// Placeholder: Run Nmap scan
-ipcMain.handle('scanner:run-nmap', async (_event, target: string) => {
-  console.log(`[IPC] Received scan request for: ${target}`)
-  // TODO: Implement Nmap orchestration in Week 2
-  return { success: false, message: 'Scanner not yet implemented' }
+// Run Nmap scan
+ipcMain.handle('scanner:run-nmap', async (event, options: { target: string; scanType?: 'quick' | 'vuln' | 'full' }) => {
+  const { target, scanType = 'quick' } = options
+  console.log(`[IPC] Received scan request for: ${target} (type: ${scanType})`)
+  
+  // First validate the target
+  const validation = await validateTarget(target)
+  if (!validation.allowed) {
+    console.log(`[IPC] Target validation failed: ${target}`)
+    return { success: false, message: `Target "${target}" is not in the allowlist` }
+  }
+  
+  console.log(`[IPC] Target validated, starting ${scanType} scan...`)
+  
+  // Run the scan with progress callback
+  const result = await runNmapScan(
+    { target, scanType },
+    (progressLine: string) => {
+      // Send progress to renderer
+      event.sender.send('scanner:progress', progressLine)
+    }
+  )
+  
+  console.log(`[IPC] Scan completed: ${result.success ? 'success' : 'failed'}`)
+  return result
 })
 
-// Placeholder: Get scan history
+// Get scan history
 ipcMain.handle('scanner:get-history', async () => {
-  // TODO: Load scan history from data/scans/
-  return []
+  const history = await getScanHistory()
+  return history
 })
 
-// Placeholder: Validate target against allowlist
+// Validate target against allowlist
 ipcMain.handle('scanner:validate-target', async (_event, target: string) => {
-  // TODO: Check against allowed-targets.json
-  const allowedPatterns = ['testphp.vulnweb.com', 'localhost', '127.0.0.1']
-  const isAllowed = allowedPatterns.some(pattern => target.includes(pattern))
-  return { allowed: isAllowed, target }
+  const result = await validateTarget(target)
+  return result
+})
+
+// Abort current scan
+ipcMain.handle('scanner:abort', () => {
+  console.log('[IPC] Received scan abort request')
+  return abortScan()
+})
+
+// ============================================
+// IPC Handlers - LLM Analysis
+// ============================================
+
+// Analyze vulnerabilities with Gemini
+ipcMain.handle('llm:analyze-vulnerabilities', async (_event, request: LLMAnalysisRequest) => {
+  console.log(`[IPC] Received LLM analysis request for ${request.vulnerabilities.length} vulnerabilities`)
+  
+  try {
+    // Get API key from environment
+    const apiKey = process.env.GEMINI_API_KEY
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY not found in environment variables')
+    }
+
+    const client = new GeminiClient({ apiKey })
+    const result = await client.analyzeVulnerabilities(request)
+    
+    console.log(`[IPC] LLM analysis complete: ${result.success ? 'success' : 'failed'}`)
+    return result
+  } catch (error) {
+    console.error('[IPC] LLM analysis error:', error)
+    return {
+      success: false,
+      analyses: [],
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+})
+
+// ============================================
+// IPC Handlers - Report Generation
+// ============================================
+
+// Export report
+ipcMain.handle('report:export', async (_event, options: ReportOptions) => {
+  console.log(`[IPC] Received report export request for: ${options.scan.target}`)
+  
+  try {
+    const result = await exportReport(options)
+    console.log(`[IPC] Report export ${result.success ? 'succeeded' : 'failed'}: ${result.filePath || result.error}`)
+    return result
+  } catch (error) {
+    console.error('[IPC] Report export error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+})
+
+// Get report history
+ipcMain.handle('report:get-history', async () => {
+  const { getReportHistory } = await import('./reports')
+  return getReportHistory()
+})
+
+// Open a report file
+ipcMain.handle('report:open', async (_event, id: string) => {
+  const { openReport } = await import('./reports')
+  return openReport(id)
+})
+
+// Delete a report
+ipcMain.handle('report:delete', async (_event, id: string, deleteFile: boolean) => {
+  const { deleteReport } = await import('./reports')
+  return deleteReport(id, deleteFile)
 })

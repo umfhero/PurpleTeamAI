@@ -1,13 +1,41 @@
-Typography: Ban Inter and system-ui. Use distinctive Serifs or technical Monospaces to add character.
+Typography
+Standardise: Use classic grotesque or geometric sans-serifs.
 
-Colour: Strictly no Purple/Indigo or linear blue gradients. Use OKLCH earth tones, "Safety Orange", or high-contrast monochrome.
+No "Future" Fonts: Avoid overly rounded, sci-fi, or "high-tech" display typefaces.
 
-Layout: Eliminate centered, rounded cards. Use sharp 0px corners, offset grids, and editorial magazine-style layouts.
+Functional Scaling: Stick to strict, mathematical type scales rather than oversized "hero" headers.
 
-Texture: Replace Gaussian blurs and "plastic" finishes with film grain, noise overlays, and 1px borders.
+Colour
+Kill the Gradient: Ban the purple-blue-pink "nebula" aesthetic; use solid, intentional brand colours.
 
-Visuals: Hard ban on emojis and 3D clay icons. Use lo-fi textures, custom SVG line art, or raw photography.
+Natural Palettes: Favour muted, earthy, or high-contrast monochromatic schemes over neon saturation.
 
-Shadows: Replace soft "glow" shadows with hard, offset "Brutalist" shadows.
+Purposeful Accents: Use colour only to indicate action or status, not for decoration.
 
-Motion: Avoid generic fades. Use staggered reveals and kinetic, scroll-triggered typography.
+Layout
+Increase Density: Move away from excessive whitespace; prioritise data-rich, compact interfaces.
+
+Strict Grids: Use rigid, visible alignment instead of "floating" elements.
+
+Utility First: Ensure every container has a functional reason to exist.
+
+Texture
+Remove Glassmorphism: Eliminate frosted glass effects and blurred background overlays.
+
+Flat Surfaces: Use distinct background shades or 1px borders to separate sections.
+
+No Glows: Strip out "bloom" effects and neon outer strokes.
+
+Visuals
+No Emojis: Replace all emojis with custom, weight-matched vector icons.
+
+Authenticity: Swap 3D "clay" characters and isometric AI illustrations for real photography or technical schematics.
+
+Icon Clarity: Use thin-stroke, non-filled icons for a precise, engineered look.
+
+Shadows
+Hard Edges: Replace soft, sprawling "dreamy" shadows with sharp, tight offsets or no shadows at all.
+
+Layering: Use 1px "inner" borders to create depth rather than external drop shadows.
+
+Consistency: Keep light sources singular and logical; avoid the "floating in a void" look.

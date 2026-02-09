@@ -12,6 +12,10 @@ frontend/dist-electron/
 frontend/out/
 frontend/.vite/
 frontend/.cache/
+frontend/release/
+
+# Scan data
+frontend/data/scans/
 
 # Electron
 *.asar
@@ -20,6 +24,7 @@ frontend/.cache/
 *.deb
 *.rpm
 *.AppImage
+*.blockmap
 
 # Environment
 .env

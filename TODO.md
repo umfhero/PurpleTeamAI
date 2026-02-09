@@ -28,20 +28,19 @@
 
 > **Goal**: User can type a URL, the app validates it against the allowlist, runs Nmap, and stores raw JSON results.
 
-- [ ] Build **Target Input page** — URL input field with allowlist validation + confirmation prompt before scanning
-  - Follow Designrules: sharp corners, monospace type, no rounded cards, no emojis, earth-tone/orange palette
-- [ ] Implement Nmap orchestration module (`scanner/nmap.ts`)
+- [x] Build **Target Input page** — URL input field with allowlist validation + confirmation prompt before scanning
+  - Follow Designrules: sharp corners, monospace type, no rounded cards, no emojis, natural color palette
+- [x] Implement Nmap orchestration module (`scanner/nmap.ts`)
   - Accepts validated target URL
   - Runs `nmap -sV -sC --script vuln -oX` via `child_process`
   - Captures XML output
-- [ ] Build XML-to-JSON parser (`scanner/parser.ts`)
+- [x] Build XML-to-JSON parser (`scanner/parser.ts`)
   - Extract: host, open ports, service versions, CVEs, script outputs
   - Normalize into a defined JSON schema (`types/scan-result.ts`)
-- [ ] Store scan results as timestamped JSON files in `data/scans/`
-- [ ] Wire IPC: renderer triggers scan → main process executes → results sent back
-- [ ] Add error handling: scan timeout, unreachable target, Nmap not found
-- [ ] Add scan progress indicator in the UI (staggered reveal animation per Designrules)
-- [ ] Continue literature review
+- [x] Store scan results as timestamped JSON files in `data/scans/`
+- [x] Wire IPC: renderer triggers scan → main process executes → results sent back
+- [x] Add error handling: scan timeout, unreachable target, Nmap not found
+- [x] Add scan progress indicator in the UI (staggered reveal animation per Designrules)
 
 ### Deliverable: Type `testphp.vulnweb.com` → app runs Nmap → structured JSON result stored.
 
@@ -51,16 +50,14 @@
 
 > **Goal**: Scan results displayed in a clean, brutalist-styled dashboard with sortable vulnerability table.
 
-- [ ] Build **Results Dashboard page** — vulnerability table with columns: Port, Service, Vulnerability, CVE, Severity
-  - Brutalist layout: 1px borders, hard offset shadows, no rounded anything
-  - Monospace or serif typography, high-contrast monochrome with safety-orange accents
-- [ ] Implement severity colour coding (Critical/High/Medium/Low/Info)
-- [ ] Add scan history sidebar — list of previous scans with timestamps
-- [ ] Load and display any stored JSON scan from `data/scans/`
-- [ ] Add filtering/sorting on the table (by severity, port, service)
-- [ ] Create vulnerability detail view — click a row to expand full details
-- [ ] Add film-grain/noise texture overlay to the UI background per Designrules
-- [ ] Finish literature review — compile into structured notes for dissertation
+- [x] Build **Results Dashboard page** — vulnerability table with columns: Port, Service, Vulnerability, CVE, Severity
+  - Functional layout: 1px borders, no shadows, sharp corners, high-contrast monochrome
+  - Monospace typography, strict grid alignment, data-rich interface
+- [x] Implement severity colour coding (Critical/High/Medium/Low/Info)
+- [x] Add scan history sidebar — list of previous scans with timestamps
+- [x] Load and display any stored JSON scan from `data/scans/`
+- [x] Add filtering/sorting on the table (by severity, port, service)
+- [x] Create vulnerability detail view — click a row to expand full details
 
 ### Deliverable: Scanned vulnerabilities displayed in styled dashboard. Literature review notes complete.
 
@@ -70,19 +67,21 @@
 
 > **Goal**: Scan results are sent to Gemini, AI returns structured vulnerability analysis.
 
-- [ ] Implement Gemini API client module (`llm/gemini.ts`)
+- [x] Implement Gemini API client module (`llm/gemini.ts`)
   - Auth via `.env` API key
   - Rate limiting + retry logic for transient failures
-- [ ] Design prompt template that sends JSON scan data and requests:
+- [x] Design prompt template that sends JSON scan data and requests:
   1. Plain-English vulnerability statement
   2. Affected endpoints / paths
   3. Severity rating with justification
   4. Specific remediation steps (tailored to the finding)
-- [ ] Parse Gemini response into structured fields (`types/llm-analysis.ts`)
-- [ ] Wire into pipeline: after scan completes → auto-send to LLM → store enriched results
-- [ ] Add loading state in UI — "Analysing with AI..." indicator
-- [ ] Display LLM analysis alongside raw scan data in the Results Dashboard
+- [x] Parse Gemini response into structured fields (`types/llm-analysis.ts`)
+- [x] Wire into pipeline: after scan completes → auto-send to LLM → store enriched results
+- [x] Add loading state in UI — "Analysing with AI..." indicator
+- [x] Display LLM analysis alongside raw scan data in the Results Dashboard
 - [ ] Test with real `testphp.vulnweb.com` scan output — validate response quality
+  - Set `GEMINI_API_KEY` in `.env` file
+  - Run complete scan → verify AI analysis appears
 - [ ] Begin Ollama fallback scaffold (optional, lower priority)
 
 ### Deliverable: Scans are automatically enriched with AI-generated analysis and remediation guidance.
@@ -93,20 +92,20 @@
 
 > **Goal**: Every vulnerability mapped to OWASP Top 10, overall security score displayed.
 
-- [ ] Build OWASP Top 10 mapping module (`analysis/owasp-mapper.ts`)
+- [x] Build OWASP Top 10 mapping module (`analysis/owasp-mapper.ts`)
   - Map by: CVE lookup, keyword matching, LLM classification fallback
   - Categories: A01 Broken Access Control → A10 SSRF
-- [ ] Design **Security Score algorithm** (0–100%):
+- [x] Design **Security Score algorithm** (0–100%):
   - Weight categories: Critical vulns (-20 each), High (-10), Medium (-5), Low (-2)
   - OWASP coverage penalty: uncovered categories slightly reduce confidence
   - Remediation potential bonus: if all have actionable fixes, slight uplift
   - Score = composite of severity impact + OWASP coverage + remediation quality
-- [ ] Build **Score Display component** — large prominent score with breakdown
-  - Brutalist gauge/bar, not a circular chart — hard edges, offset shadow
-- [ ] Build **OWASP Coverage Matrix** — grid showing which categories were found
+- [x] Build **Score Display component** — large prominent score with breakdown
+  - Strict grid layout with 1px borders, flat surfaces, no gradients or glows
+- [x] Build **OWASP Coverage Matrix** — grid showing which categories were found
   - Visual: filled vs empty cells, monochrome with orange highlights for found categories
-- [ ] Wire score calculation into the post-scan pipeline
-- [ ] Display score + OWASP matrix on the Results Dashboard
+- [x] Wire score calculation into the post-scan pipeline
+- [x] Display score + OWASP matrix on the Results Dashboard
 
 ### Deliverable: Each scan produces a security score out of 100% with OWASP category breakdown.
 
@@ -116,25 +115,26 @@
 
 > **Goal**: Exportable security report, polished unique UI following all design rules.
 
-- [ ] Build report generator — structured HTML/PDF output containing:
+- [x] Build report generator — structured HTML/PDF output containing:
   - Target metadata + scan timestamp
   - Overall security score with breakdown
   - OWASP coverage matrix
   - Vulnerability table with AI-enriched descriptions
   - Prioritised remediation steps
-- [ ] Add "Export Report" button to dashboard
-- [ ] **UI polish pass** applying all Designrules:
-  - [ ] Replace any remaining Inter/system-ui with distinctive serif or monospace font
-  - [ ] Ensure colour palette uses OKLCH earth tones / safety orange / high-contrast mono — no purple/indigo
-  - [ ] Ensure all corners are 0px — no rounded elements anywhere
-  - [ ] Add noise/grain texture overlays
-  - [ ] Hard offset brutalist shadows on all card-like elements
-  - [ ] Staggered reveal animations on page load (no generic fades)
-  - [ ] Custom SVG line art or lo-fi icons — no emojis, no 3D clay icons
-- [ ] Review all pages for design consistency
-- [ ] Add app-wide navigation: Target Input → Scanning → Results → Report
+- [x] Add "Export Report" button to dashboard
+- [ ] **UI polish pass** applying updated Designrules:
+  - [x] Typography: Classic grotesque/geometric sans-serif (JetBrains Mono ✓), functional scaling
+  - [x] Colour: No gradients, natural/muted palette or high-contrast monochrome, purposeful accents only
+  - [x] Layout: Increase density, strict grids, utility-first approach
+  - [x] Texture: Flat surfaces, 1px borders for separation, no glassmorphism or glows
+  - [x] Visuals: Custom vector icons (lucide-react ✓), no emojis, thin-stroke icons
+  - [x] Shadows: Removed (or hard edges only if needed for depth)
+  - [x] Review density - ensure data-rich, compact interfaces throughout
+  - [x] Strict grid alignment - ensure no "floating" elements
+- [x] Review all pages for design consistency
+- [x] Add app-wide navigation: Target Input → Scanning → Results → Report
 
-### Deliverable: Exportable security report, visually unique brutalist UI complete.
+### Deliverable: Exportable security report, visually unique UI complete.
 
 ---
 

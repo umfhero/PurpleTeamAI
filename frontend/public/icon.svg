@@ -1,0 +1,22 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="256" height="256" fill="#0a0a0a"/>
+  
+  <!-- Shield outline -->
+  <path d="M128 32L64 64V112C64 160 90 200 128 224C166 200 192 160 192 112V64L128 32Z" 
+        stroke="#b794f6" 
+        stroke-width="8" 
+        fill="none"/>
+  
+  <!-- Inner shield accent -->
+  <path d="M128 56L80 80V112C80 148 98 180 128 200C158 180 176 148 176 112V80L128 56Z" 
+        fill="#b794f6" 
+        opacity="0.2"/>
+  
+  <!-- Center crosshair/target -->
+  <circle cx="128" cy="128" r="24" stroke="#b794f6" stroke-width="4" fill="none"/>
+  <line x1="128" y1="100" x2="128" y2="116" stroke="#b794f6" stroke-width="3"/>
+  <line x1="128" y1="140" x2="128" y2="156" stroke="#b794f6" stroke-width="3"/>
+  <line x1="100" y1="128" x2="116" y2="128" stroke="#b794f6" stroke-width="3"/>
+  <line x1="140" y1="128" x2="156" y2="128" stroke="#b794f6" stroke-width="3"/>
+</svg>

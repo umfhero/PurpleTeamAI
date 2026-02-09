@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import ScanTarget from './pages/ScanTarget'
+import Reports from './pages/Reports'
 
 const queryClient = new QueryClient()
 
@@ -15,7 +16,7 @@ function App() {
             <Route index element={<Navigate to="/scan" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="scan" element={<ScanTarget />} />
-            {/* Add more routes here */}
+            <Route path="reports" element={<Reports />} />
           </Route>
         </Routes>
       </BrowserRouter>

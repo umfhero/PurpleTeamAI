@@ -13,6 +13,10 @@ export interface NmapScanData {
   ports: PortResult[]
   vulnerabilities: VulnerabilityResult[]
   rawXml?: string
+  llmAnalysis?: LLMAnalysisResult
+  securityScore?: SecurityScore
+  owaspCoverage?: OWASPCoverage
+  owaspDistribution?: Record<OWASPCategory, number>
 }
 
 export interface PortResult {
@@ -42,11 +46,115 @@ export interface ValidationResult {
   message?: string
 }
 
+export interface VulnerabilityAnalysis {
+  vulnerabilityId: string
+  plainEnglishSummary: string
+  affectedEndpoints: string[]
+  severityJustification: string
+  remediationSteps: string[]
+  owaspCategory?: string
+  confidenceScore: number
+}
+
+export interface LLMAnalysisResult {
+  success: boolean
+  analyses: VulnerabilityAnalysis[]
+  error?: string
+  model?: string
+  tokensUsed?: number
+  processingTime?: number
+}
+
+export interface LLMAnalysisRequest {
+  vulnerabilities: Array<{
+    id: string
+    cve?: string
+    title: string
+    description: string
+    severity: string
+    port?: number
+    service?: string
+    output?: string
+  }>
+  target: string
+  scanTimestamp: string
+}
+
+// OWASP Top 10 types
+export type OWASPCategory = 'A01' | 'A02' | 'A03' | 'A04' | 'A05' | 'A06' | 'A07' | 'A08' | 'A09' | 'A10'
+
+export interface OWASPCoverage {
+  categories: OWASPCategory[]
+  total: number
+  percentage: number
+}
+
+// Security Score types
+export interface SecurityScore {
+  overall: number // 0-100
+  grade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F'
+  breakdown: {
+    severityImpact: number
+    owaspCoverage: number
+    remediationPotential: number
+  }
+  details: {
+    totalVulnerabilities: number
+    critical: number
+    high: number
+    medium: number
+    low: number
+    info: number
+  }
+  recommendations: string[]
+}
+
+export interface ScanOptions {
+  target: string
+  scanType?: 'quick' | 'vuln' | 'full'
+}
+
+// Report types
+export interface ReportOptions {
+  scan: NmapScanData
+  format: 'html' | 'pdf'
+  includeRawData?: boolean
+}
+
+export interface ReportResult {
+  success: boolean
+  filePath?: string
+  error?: string
+}
+
+export interface ReportMetadata {
+  id: string
+  target: string
+  scanTimestamp: string
+  exportedAt: string
+  filePath: string
+  format: 'html' | 'pdf'
+  vulnerabilityCount: number
+  securityScore?: number
+  grade?: string
+}
+
 export interface ElectronAPI {
   scanner: {
-    runNmap: (target: string) => Promise<ScanResult>
+    runNmap: (options: ScanOptions) => Promise<ScanResult>
     getHistory: () => Promise<NmapScanData[]>
     validateTarget: (target: string) => Promise<ValidationResult>
+    abort: () => Promise<{ success: boolean; message: string }>
+    onProgress: (callback: (line: string) => void) => () => void
+  }
+  llm: {
+    analyzeVulnerabilities: (request: LLMAnalysisRequest) => Promise<LLMAnalysisResult>
+  }
+  report: {
+    export: (options: ReportOptions) => Promise<ReportResult>
+    getHistory: () => Promise<ReportMetadata[]>
+    open: (id: string) => Promise<boolean>
+    delete: (id: string, deleteFile: boolean) => Promise<boolean>
   }
   versions: {
     node: string
