@@ -93,6 +93,8 @@ export interface OWASPCoverage {
 export interface SecurityScore {
   overall: number // 0-100
   grade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F'
+  confidence: 'high' | 'medium' | 'low'
+  confidenceReason: string
   breakdown: {
     severityImpact: number
     owaspCoverage: number
@@ -111,7 +113,6 @@ export interface SecurityScore {
 
 export interface ScanOptions {
   target: string
-  scanType?: 'quick' | 'vuln' | 'full'
 }
 
 // Report types
@@ -147,6 +148,7 @@ export interface ElectronAPI {
     validateTarget: (target: string) => Promise<ValidationResult>
     abort: () => Promise<{ success: boolean; message: string }>
     onProgress: (callback: (line: string) => void) => () => void
+    onPhaseResult: (callback: (data: NmapScanData) => void) => () => void
   }
   llm: {
     analyzeVulnerabilities: (request: LLMAnalysisRequest) => Promise<LLMAnalysisResult>

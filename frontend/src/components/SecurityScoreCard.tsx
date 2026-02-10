@@ -42,6 +42,19 @@ export default function SecurityScoreCard({ score }: SecurityScoreCardProps) {
     }
   }
 
+  const getConfidenceColor = () => {
+    switch (score.confidence) {
+      case 'high':
+        return 'text-[oklch(0.75_0.15_160)] border-[oklch(0.75_0.15_160)]/30'
+      case 'medium':
+        return 'text-[oklch(0.70_0.15_85)] border-[oklch(0.70_0.15_85)]/30'
+      case 'low':
+        return 'text-critical border-critical/30'
+      default:
+        return 'text-foreground/60 border-border'
+    }
+  }
+
   return (
     <div className="border border-border bg-background h-full flex flex-col">
       <div className="border-b border-border px-3 py-2">
@@ -52,7 +65,7 @@ export default function SecurityScoreCard({ score }: SecurityScoreCardProps) {
 
       <div className="p-3 flex-1 flex flex-col">
         {/* Large score display - grade on right */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-baseline gap-2">
             <div className={`text-5xl font-mono font-bold ${getGradeColor()}`}>
               {score.overall}
@@ -63,6 +76,23 @@ export default function SecurityScoreCard({ score }: SecurityScoreCardProps) {
             {score.grade}
           </div>
         </div>
+
+        {/* Confidence indicator */}
+        {score.confidence && (
+          <div className={`mb-3 px-2 py-1.5 border font-mono text-[10px] uppercase tracking-wider ${getConfidenceColor()}`}>
+            <div className="flex items-center justify-between">
+              <span>Scan Confidence: {score.confidence}</span>
+              {score.confidence === 'low' && (
+                <span className="text-critical font-bold">!</span>
+              )}
+            </div>
+            {score.confidenceReason && (
+              <div className="mt-1 text-[10px] normal-case tracking-normal text-foreground/50 leading-tight">
+                {score.confidenceReason}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Score breakdown */}
         <div className="space-y-2 border-t border-border pt-3">

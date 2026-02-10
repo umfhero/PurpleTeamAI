@@ -6,6 +6,8 @@ import { getOWASPCoverage } from './owasp-mapper'
 export interface SecurityScore {
   overall: number // 0-100
   grade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F'
+  confidence: 'high' | 'medium' | 'low'
+  confidenceReason: string
   breakdown: {
     severityImpact: number // Points lost due to vulnerabilities
     owaspCoverage: number // Penalty for wide OWASP coverage (more categories = worse)
@@ -35,6 +37,9 @@ export interface SecurityScore {
  * - OWASP coverage penalty: -5 per category found (wide attack surface = worse)
  * - Remediation bonus: up to +10 if all vulns have LLM analysis (indicates fixability)
  * - Floor at 0, ceiling at 100
+ * 
+ * Confidence is calculated separately based on scan coverage — a high score
+ * with low confidence means the scanner couldn't find much, NOT that the target is secure.
  */
 export function calculateSecurityScore(
   scanData: NmapScanData,
@@ -84,6 +89,9 @@ export function calculateSecurityScore(
   else if (finalScore >= 30) grade = 'D'
   else grade = 'F'
 
+  // Calculate scan confidence — how much can we trust this score?
+  const { confidence, confidenceReason } = calculateConfidence(scanData, vulns.length)
+
   // Generate recommendations
   const recommendations: string[] = []
   
@@ -108,14 +116,20 @@ export function calculateSecurityScore(
   }
 
   if (vulns.length === 0) {
-    recommendations.push('No vulnerabilities detected - maintain current security posture')
+    recommendations.push('No vulnerabilities detected by automated scanner — this does not guarantee security')
+    recommendations.push('Nmap has limited web app testing coverage — supplement with dedicated web scanners (ZAP, Burp Suite, Nikto)')
+  } else if (confidence === 'low') {
+    recommendations.push('Low scan confidence — results may not reflect the full attack surface')
+    recommendations.push('Consider running additional web application scanners for deeper coverage')
   } else if (finalScore >= 85) {
-    recommendations.push('Strong security posture - address remaining issues to reach A+')
+    recommendations.push('Strong security posture detected — address remaining issues to reach A+')
   }
 
   return {
     overall: Math.round(finalScore),
     grade,
+    confidence,
+    confidenceReason,
     breakdown: {
       severityImpact: -severityImpact,
       owaspCoverage: -owaspPenalty,
@@ -126,6 +140,68 @@ export function calculateSecurityScore(
       ...counts
     },
     recommendations
+  }
+}
+
+/**
+ * Calculate scan confidence — how much should we trust this score?
+ * 
+ * A high score with low confidence means "we couldn't find much" not "the target is secure".
+ * This prevents the misleading 100/100 A+ when the scanner simply didn't detect anything.
+ */
+function calculateConfidence(
+  scanData: NmapScanData,
+  vulnCount: number
+): { confidence: 'high' | 'medium' | 'low'; confidenceReason: string } {
+  const openPorts = scanData.ports.filter(p => p.state === 'open')
+  const httpPorts = openPorts.filter(p =>
+    ['http', 'https', 'http-proxy', 'ssl/http'].includes(p.service || '') ||
+    [80, 443, 8080, 8443].includes(p.port)
+  )
+
+  // No open ports at all — target may be unreachable or heavily firewalled
+  if (openPorts.length === 0) {
+    return {
+      confidence: 'low',
+      confidenceReason: 'No open ports detected — target may be unreachable or heavily filtered'
+    }
+  }
+
+  // Web services found but zero vulnerabilities — very suspicious, scanner likely missed things
+  if (httpPorts.length > 0 && vulnCount === 0) {
+    return {
+      confidence: 'low',
+      confidenceReason: 'Web services detected but no vulnerabilities found — Nmap has limited web application testing coverage'
+    }
+  }
+
+  // Web services found but very few vulnerabilities
+  if (httpPorts.length > 0 && vulnCount <= 2) {
+    return {
+      confidence: 'medium',
+      confidenceReason: 'Few vulnerabilities detected — Nmap scripts provide partial coverage of web application vulnerabilities'
+    }
+  }
+
+  // Non-web target with no vulns — more reasonable since fewer attack vectors
+  if (httpPorts.length === 0 && vulnCount === 0 && openPorts.length > 0) {
+    return {
+      confidence: 'medium',
+      confidenceReason: 'No web services detected — limited attack surface for vulnerability scanning'
+    }
+  }
+
+  // Decent number of findings — scan likely captured meaningful data
+  if (vulnCount >= 5) {
+    return {
+      confidence: 'high',
+      confidenceReason: 'Sufficient vulnerability data collected for reliable scoring'
+    }
+  }
+
+  return {
+    confidence: 'medium',
+    confidenceReason: 'Moderate vulnerability data collected — score reflects detected issues only'
   }
 }
 

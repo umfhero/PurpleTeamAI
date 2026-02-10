@@ -66,7 +66,7 @@ export default function Reports() {
     
     setExporting(true)
     try {
-      await window.electronAPI.report.export(selectedScan, 'html')
+      await window.electronAPI.report.export({ scan: selectedScan, format: 'html' })
     } catch (error) {
       console.error('Export failed:', error)
     } finally {

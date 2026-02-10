@@ -4,7 +4,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 contextBridge.exposeInMainWorld('electronAPI', {
   // Scanner APIs
   scanner: {
-    runNmap: (target: string) => ipcRenderer.invoke('scanner:run-nmap', target),
+    runNmap: (options: unknown) => ipcRenderer.invoke('scanner:run-nmap', options),
     getHistory: () => ipcRenderer.invoke('scanner:get-history'),
     validateTarget: (target: string) => ipcRenderer.invoke('scanner:validate-target', target),
     abort: () => ipcRenderer.invoke('scanner:abort'),
@@ -13,6 +13,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on('scanner:progress', listener)
       // Return cleanup function
       return () => ipcRenderer.removeListener('scanner:progress', listener)
+    },
+    onPhaseResult: (callback: (data: unknown) => void) => {
+      const listener = (_event: unknown, data: unknown) => callback(data)
+      ipcRenderer.on('scanner:phase-result', listener)
+      return () => ipcRenderer.removeListener('scanner:phase-result', listener)
     },
   },
 

@@ -3,20 +3,21 @@
 
 import type { NmapScanData } from '../types/electron'
 
-export type ScanState = 'idle' | 'validating' | 'confirming' | 'scanning' | 'analyzing' | 'complete' | 'error'
-export type ScanType = 'quick' | 'vuln' | 'full'
+export type ScanState = 'idle' | 'validating' | 'confirming' | 'scanning' | 'deepening' | 'analyzing' | 'complete' | 'error'
 
 interface ScanStore {
   // Scan state
   state: ScanState
   target: string
-  scanType: ScanType
   logs: string[]
   result: NmapScanData | null
   error: string | null
   
   // Progress listener cleanup function
   progressCleanup: (() => void) | null
+  
+  // Phase result listener cleanup
+  phaseCleanup: (() => void) | null
   
   // Subscribers for state changes
   subscribers: Set<() => void>
@@ -26,11 +27,11 @@ interface ScanStore {
 const store: ScanStore = {
   state: 'idle',
   target: '',
-  scanType: 'quick',
   logs: [],
   result: null,
   error: null,
   progressCleanup: null,
+  phaseCleanup: null,
   subscribers: new Set(),
 }
 
@@ -50,7 +51,6 @@ export function getScanState() {
   return {
     state: store.state,
     target: store.target,
-    scanType: store.scanType,
     logs: store.logs,
     result: store.result,
     error: store.error,
@@ -65,11 +65,6 @@ export function setScanState(state: ScanState) {
 
 export function setScanTarget(target: string) {
   store.target = target
-  notifySubscribers()
-}
-
-export function setScanType(scanType: ScanType) {
-  store.scanType = scanType
   notifySubscribers()
 }
 
@@ -101,16 +96,26 @@ export function setProgressCleanup(cleanup: (() => void) | null) {
   store.progressCleanup = cleanup
 }
 
+export function setPhaseCleanup(cleanup: (() => void) | null) {
+  if (store.phaseCleanup) {
+    store.phaseCleanup()
+  }
+  store.phaseCleanup = cleanup
+}
+
 export function resetScanStore() {
-  // Clean up progress listener
+  // Clean up listeners
   if (store.progressCleanup) {
     store.progressCleanup()
     store.progressCleanup = null
   }
+  if (store.phaseCleanup) {
+    store.phaseCleanup()
+    store.phaseCleanup = null
+  }
   
   store.state = 'idle'
   store.target = ''
-  store.scanType = 'quick'
   store.logs = []
   store.result = null
   store.error = null

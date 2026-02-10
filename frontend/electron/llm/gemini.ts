@@ -132,7 +132,7 @@ Keep summaries concise (2-3 sentences). Provide 3 remediation steps. JSON only, 
     }
   }
 
-  private parseResponse(response: any, vulnerabilityIds: string[]): VulnerabilityAnalysis[] { {
+  private parseResponse(response: any, vulnerabilityIds: string[]): VulnerabilityAnalysis[] {
     try {
       const text = response.candidates?.[0]?.content?.parts?.[0]?.text
       if (!text) {

@@ -104,9 +104,9 @@ app.on('window-all-closed', () => {
 // ============================================
 
 // Run Nmap scan
-ipcMain.handle('scanner:run-nmap', async (event, options: { target: string; scanType?: 'quick' | 'vuln' | 'full' }) => {
-  const { target, scanType = 'quick' } = options
-  console.log(`[IPC] Received scan request for: ${target} (type: ${scanType})`)
+ipcMain.handle('scanner:run-nmap', async (event, options: { target: string }) => {
+  const { target } = options
+  console.log(`[IPC] Received scan request for: ${target}`)
   
   // First validate the target
   const validation = await validateTarget(target)
@@ -115,15 +115,19 @@ ipcMain.handle('scanner:run-nmap', async (event, options: { target: string; scan
     return { success: false, message: `Target "${target}" is not in the allowlist` }
   }
   
-  console.log(`[IPC] Target validated, starting ${scanType} scan...`)
+  console.log(`[IPC] Target validated, starting progressive scan...`)
   
-  // Run the scan with progress callback
+  // Run the scan with progress + phase callbacks
   const result = await runNmapScan(
-    { target, scanType },
+    { target },
     (progressLine: string) => {
       // Send progress to renderer
       event.sender.send('scanner:progress', progressLine)
-    }
+    },
+    (phaseData) => {
+      // Send Phase 1 results to renderer immediately
+      event.sender.send('scanner:phase-result', phaseData)
+    },
   )
   
   console.log(`[IPC] Scan completed: ${result.success ? 'success' : 'failed'}`)

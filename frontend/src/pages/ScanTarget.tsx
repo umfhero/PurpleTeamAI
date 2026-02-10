@@ -4,13 +4,12 @@ import { useNavigate } from 'react-router-dom'
 import { useScanStore } from '../lib/useScanStore'
 import type { ScanState } from '../lib/scanStore'
 
-type ScanType = 'quick' | 'vuln' | 'full'
-
 // Progress step definitions
 const PROGRESS_STEPS = [
   { id: 'validating', label: 'Validating', description: 'Checking allowlist' },
   { id: 'confirming', label: 'Confirm', description: 'Awaiting user action' },
-  { id: 'scanning', label: 'Scanning', description: 'Running Nmap' },
+  { id: 'scanning', label: 'Phase 1', description: 'Quick discovery' },
+  { id: 'deepening', label: 'Phase 2', description: 'Deep vulnerability scan' },
   { id: 'analyzing', label: 'Analyzing', description: 'AI processing' },
   { id: 'complete', label: 'Complete', description: 'Results ready' },
 ] as const
@@ -107,8 +106,8 @@ function ScanProgressStepper({ currentState, scanLogs }: { currentState: ScanSta
         </div>
       </div>
       
-      {/* Live Terminal - only show during scanning/analyzing */}
-      {(currentState === 'scanning' || currentState === 'analyzing') && scanLogs.length > 0 && (
+      {/* Live Terminal - show during scanning, deepening, and analyzing */}
+      {(currentState === 'scanning' || currentState === 'deepening' || currentState === 'analyzing') && scanLogs.length > 0 && (
         <div className="border-t border-border">
           <div className="p-2 border-b border-border bg-muted/20 flex items-center gap-2">
             <Zap className="w-3 h-3 text-primary" />
@@ -135,12 +134,6 @@ function ScanProgressStepper({ currentState, scanLogs }: { currentState: ScanSta
   )
 }
 
-const SCAN_TYPE_INFO: Record<ScanType, { label: string; description: string; time: string }> = {
-  quick: { label: 'Quick Scan', description: 'Fast port scan (top 100 ports)', time: '~1-2 min' },
-  vuln: { label: 'Vulnerability Scan', description: 'Service detection + vuln scripts', time: '~5-15 min' },
-  full: { label: 'Full Scan', description: 'All 65535 ports + services', time: '~30+ min' },
-}
-
 export default function ScanTarget() {
   const navigate = useNavigate()
   
@@ -148,23 +141,22 @@ export default function ScanTarget() {
   const {
     scanState,
     target,
-    scanType,
     scanLogs,
     scanResult,
     error,
     setScanState,
     setTarget,
-    setScanType,
     setScanLogs,
     appendLog,
     setScanResult,
     setScanError,
     setProgressCleanup,
+    setPhaseCleanup,
     reset,
   } = useScanStore()
   
   const [validationResult, setValidationResult] = useState<{ allowed: boolean; message: string } | null>(null)
-  const [isInputCollapsed, setIsInputCollapsed] = useState(scanState === 'scanning' || scanState === 'analyzing')
+  const [isInputCollapsed, setIsInputCollapsed] = useState(scanState === 'scanning' || scanState === 'deepening' || scanState === 'analyzing')
 
   const validateTarget = async () => {
     if (!target.trim()) {
@@ -214,26 +206,36 @@ export default function ScanTarget() {
 
     try {
       if (window.electronAPI) {
-        // Set up progress listener - store cleanup in global store
+        // Set up progress listener
         const removeListener = window.electronAPI.scanner.onProgress((line: string) => {
           appendLog(line)
         })
         setProgressCleanup(removeListener)
 
-        // Step 1: Run Nmap scan
-        console.log(`[ScanTarget] Starting ${scanType} scan for: ${target}`)
-        const result = await window.electronAPI.scanner.runNmap({ target, scanType })
+        // Set up phase result listener — fires when Phase 1 completes
+        const removePhaseListener = window.electronAPI.scanner.onPhaseResult((data) => {
+          console.log('[ScanTarget] Phase 1 complete, showing preliminary results')
+          setScanResult(data)
+          setScanState('deepening') // Transition to Phase 2
+        })
+        setPhaseCleanup(removePhaseListener)
+
+        // Run progressive scan (Phase 1 + Phase 2 internally)
+        console.log(`[ScanTarget] Starting progressive scan for: ${target}`)
+        const result = await window.electronAPI.scanner.runNmap({ target })
         
-        // Clean up listener
+        // Clean up listeners
         removeListener()
+        removePhaseListener()
         setProgressCleanup(null)
+        setPhaseCleanup(null)
         
         console.log(`[ScanTarget] Scan result:`, result)
         
         if (result.success && result.data) {
           const scanData = result.data
           
-          // Step 2: Analyze with LLM if we have vulnerabilities
+          // Analyze with LLM if we have vulnerabilities
           if (scanData.vulnerabilities.length > 0) {
             console.log(`[ScanTarget] Starting LLM analysis for ${scanData.vulnerabilities.length} vulnerabilities`)
             setScanState('analyzing')
@@ -257,7 +259,6 @@ export default function ScanTarget() {
             } catch (llmError) {
               console.error('[ScanTarget] LLM analysis error:', llmError)
               appendLog(`[LLM] Error: ${llmError}\n`)
-              // Continue even if LLM fails - we still have scan results
             }
           } else {
             console.log('[ScanTarget] No vulnerabilities found, skipping LLM analysis')
@@ -349,7 +350,7 @@ export default function ScanTarget() {
             {isInputCollapsed && target && (
               <div className="flex items-center gap-2 mt-0.5">
                 <p className="text-sm font-mono text-foreground">
-                  {target} <span className="text-muted-foreground">• {SCAN_TYPE_INFO[scanType].label}</span>
+                  {target} <span className="text-muted-foreground">• Progressive Scan</span>
                 </p>
                 {validationResult && (
                   <span className={`inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded ${
@@ -428,31 +429,6 @@ export default function ScanTarget() {
                 </span>
               )}
             </div>
-
-            {/* Scan Type Selector */}
-            <div className="mt-4">
-              <span className="text-sm font-mono uppercase tracking-wider text-muted-foreground">
-                Scan Type
-              </span>
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {(Object.keys(SCAN_TYPE_INFO) as ScanType[]).map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setScanType(type)}
-                    disabled={scanState === 'scanning'}
-                    className={`p-3 border text-left transition-colors ${
-                      scanType === type
-                        ? 'border-primary bg-primary/10 text-foreground'
-                        : 'border-border hover:border-primary/50 text-muted-foreground hover:text-foreground'
-                    } disabled:opacity-50`}
-                  >
-                    <div className="font-mono text-sm font-semibold">{SCAN_TYPE_INFO[type].label}</div>
-                    <div className="text-xs mt-1 opacity-70">{SCAN_TYPE_INFO[type].description}</div>
-                    <div className="text-xs mt-1 text-primary">{SCAN_TYPE_INFO[type].time}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -468,7 +444,7 @@ export default function ScanTarget() {
               <h3 className="text-lg mb-1">Confirm Scan</h3>
               <p className="text-muted-foreground text-sm font-mono">
                 You are about to scan <span className="text-primary">{target}</span>.
-                This will run Nmap with vulnerability detection scripts.
+                This will run a progressive scan: quick discovery first, then deep vulnerability testing.
               </p>
             </div>
           </div>
@@ -497,14 +473,14 @@ export default function ScanTarget() {
       {/* Scan Progress Stepper - shows during scanning and analyzing */}
       <ScanProgressStepper currentState={scanState} scanLogs={scanLogs} />
 
-      {/* Scanning Header (additional context) */}
+      {/* Scanning Header - Phase 1 */}
       {scanState === 'scanning' && (
         <div className="border border-border bg-card p-4 flex items-center gap-3 animate-stagger-in" style={{ animationDelay: '150ms' }}>
           <Loader2 className="w-5 h-5 text-primary animate-spin" />
           <div className="flex-1">
-            <p className="font-mono text-sm font-bold">Scanning {target}</p>
+            <p className="font-mono text-sm font-bold">Phase 1: Quick Discovery</p>
             <p className="text-xs text-muted-foreground font-mono mt-1">
-              Running {SCAN_TYPE_INFO[scanType].label} • {SCAN_TYPE_INFO[scanType].time}
+              Scanning {target} • Top 100 ports • ~2-4 min
             </p>
           </div>
           <button
@@ -515,6 +491,55 @@ export default function ScanTarget() {
           >
             <Square className="w-3 h-3 fill-current" /> Stop
           </button>
+        </div>
+      )}
+
+      {/* Phase 2 Header - Deep Scan (with Phase 1 results summary) */}
+      {scanState === 'deepening' && scanResult && (
+        <div className="space-y-3 animate-stagger-in" style={{ animationDelay: '150ms' }}>
+          {/* Phase 1 Results Summary */}
+          <div className="border border-[hsl(var(--low))]/50 bg-[hsl(var(--low))]/5 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Check className="w-4 h-4 text-[hsl(var(--low))]" />
+              <span className="text-xs font-mono uppercase tracking-wider text-[hsl(var(--low))]">Phase 1 Results</span>
+            </div>
+            <div className="grid grid-cols-4 gap-3">
+              <div className="text-center">
+                <div className="text-lg font-bold font-mono">{scanResult.securityScore?.overall ?? '—'}</div>
+                <div className="text-[10px] text-muted-foreground font-mono">SCORE</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold font-mono">{scanResult.ports.length}</div>
+                <div className="text-[10px] text-muted-foreground font-mono">PORTS</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold font-mono">{scanResult.vulnerabilities.length}</div>
+                <div className="text-[10px] text-muted-foreground font-mono">VULNS</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold font-mono">{scanResult.securityScore?.grade ?? '—'}</div>
+                <div className="text-[10px] text-muted-foreground font-mono">GRADE</div>
+              </div>
+            </div>
+          </div>
+          {/* Phase 2 Progress */}
+          <div className="border border-border bg-card p-4 flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-primary animate-spin" />
+            <div className="flex-1">
+              <p className="font-mono text-sm font-bold">Phase 2: Deep Vulnerability Scan</p>
+              <p className="text-xs text-muted-foreground font-mono mt-1">
+                All 65535 ports • SQLi • XSS • CSRF • Enumeration • ~10-25 min
+              </p>
+            </div>
+            <button
+              onClick={stopScan}
+              className="px-4 py-2 bg-[hsl(var(--critical))]/10 text-[hsl(var(--critical))] font-mono text-xs uppercase tracking-wider
+                         border border-[hsl(var(--critical))] hover:bg-[hsl(var(--critical))]/20 transition-colors
+                         flex items-center gap-2"
+            >
+              <Square className="w-3 h-3 fill-current" /> Stop
+            </button>
+          </div>
         </div>
       )}
 

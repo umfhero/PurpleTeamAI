@@ -5,15 +5,14 @@ import {
   getScanState,
   setScanState as setStoreScanState,
   setScanTarget as setStoreTarget,
-  setScanType as setStoreScanType,
   addScanLog,
   setScanLogs as setStoreLogs,
   setScanResult as setStoreResult,
   setScanError as setStoreError,
   setProgressCleanup,
+  setPhaseCleanup,
   resetScanStore,
   type ScanState,
-  type ScanType,
 } from './scanStore'
 import type { NmapScanData } from '../types/electron'
 
@@ -36,10 +35,6 @@ export function useScanStore() {
 
   const setTarget = useCallback((target: string) => {
     setStoreTarget(target)
-  }, [])
-
-  const setScanType = useCallback((scanType: ScanType) => {
-    setStoreScanType(scanType)
   }, [])
 
   const setScanLogs = useCallback((logs: string[]) => {
@@ -66,7 +61,6 @@ export function useScanStore() {
     // State
     scanState: state.state,
     target: state.target,
-    scanType: state.scanType,
     scanLogs: state.logs,
     scanResult: state.result,
     error: state.error,
@@ -74,12 +68,12 @@ export function useScanStore() {
     // Actions
     setScanState,
     setTarget,
-    setScanType,
     setScanLogs,
     appendLog,
     setScanResult,
     setScanError,
     setProgressCleanup,
+    setPhaseCleanup,
     reset,
   }
 }
