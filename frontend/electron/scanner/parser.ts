@@ -216,6 +216,28 @@ function parseScriptToVulnerability(
     return null
   }
 
+  // Filter out "negative" results — scripts that ran but found nothing
+  const outputLower = output.toLowerCase()
+  const negativeIndicators = [
+    "couldn't find",
+    "could not find",
+    "not found",
+    "no vulnerabilities",
+    "not vulnerable",
+    "not affected",
+    "doesn't seem to be vulnerable",
+    "does not appear to be vulnerable",
+    "no issues found",
+    "no matches found",
+    "no results",
+  ]
+  
+  const hasNegativeResult = negativeIndicators.some(phrase => outputLower.includes(phrase))
+  if (hasNegativeResult && outputLower.length < 200) {
+    // Short output with negative phrase = no findings, skip it
+    return null
+  }
+
   // Try to extract CVE from output
   const cveMatch = output.match(/CVE-\d{4}-\d+/i)
   const cve = cveMatch ? cveMatch[0].toUpperCase() : undefined

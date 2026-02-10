@@ -205,6 +205,10 @@ export function generateHtmlReport(scan: NmapScanData): string {
       padding: 12px;
       border-bottom: 1px solid #2a2a2a;
       vertical-align: top;
+      word-wrap: break-word;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      max-width: 0;
     }
     
     .severity-badge {
@@ -219,23 +223,25 @@ export function generateHtmlReport(scan: NmapScanData): string {
       margin-top: 16px;
       padding: 12px;
       background: #1a1a1a;
-      border-left: 3px solid #c4b5fd;
+      border-left: 3px solid #22c55e;
     }
     
     .remediation h4 {
       font-size: 11px;
       text-transform: uppercase;
-      color: #c4b5fd;
+      color: #22c55e;
       margin-bottom: 8px;
+      letter-spacing: 0.05em;
     }
     
-    .remediation ul {
-      margin-left: 16px;
+    .remediation ol {
+      margin-left: 20px;
       font-size: 11px;
+      line-height: 1.7;
     }
     
     .remediation li {
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     
     .port-list {
@@ -373,11 +379,11 @@ export function generateHtmlReport(scan: NmapScanData): string {
         <table class="vuln-table">
           <thead>
             <tr>
-              <th style="width: 80px;">Severity</th>
-              <th style="width: 100px;">CVE</th>
-              <th>Vulnerability</th>
+              <th style="width: 100px;">Severity</th>
+              <th style="width: 120px;">CVE</th>
+              <th>Vulnerability & Technical Details</th>
               <th style="width: 80px;">Port</th>
-              <th style="width: 120px;">Service</th>
+              <th style="width: 100px;">Service</th>
             </tr>
           </thead>
           <tbody>
@@ -463,34 +469,80 @@ function generateOwaspGrid(categories: string[]): string {
   }).join('')
 }
 
-function generateVulnRow(vuln: VulnerabilityResult, analyses: Array<{ vulnerabilityId: string; remediationSteps: string[] }>): string {
+function generateVulnRow(vuln: VulnerabilityResult, analyses: Array<{ vulnerabilityId: string; remediationSteps: string[]; plainEnglishSummary?: string; affectedEndpoints?: string[]; severityJustification?: string }>): string {
   const colors = SEVERITY_COLORS[vuln.severity] || SEVERITY_COLORS.info
   const analysis = analyses.find(a => a.vulnerabilityId === vuln.id)
   
+  // Extract URLs from output if present
+  const urlMatches = vuln.output?.match(/https?:\/\/[^\s<>"]+/gi) || []
+  const affectedUrls = [...new Set([...urlMatches, ...(analysis?.affectedEndpoints || [])])]
+  
   return `
     <tr>
-      <td>
+      <td style="width: 100px;">
         <span class="severity-badge" style="background: ${colors.bg}; color: ${colors.text}">
-          ${vuln.severity}
+          ${vuln.severity.toUpperCase()}
         </span>
       </td>
-      <td style="font-size: 11px;">${vuln.cve || '—'}</td>
+      <td style="font-size: 11px; width: 120px;">
+        ${vuln.cve ? `<a href="https://nvd.nist.gov/vuln/detail/${vuln.cve}" target="_blank" style="color: #c4b5fd; text-decoration: none;">${vuln.cve}</a>` : '—'}
+      </td>
       <td>
-        <strong>${escapeHtml(vuln.title)}</strong>
-        <div style="font-size: 11px; color: #a0a0a0; margin-top: 4px;">
-          ${escapeHtml(vuln.description)}
+        <div style="margin-bottom: 12px;">
+          <strong style="font-size: 14px; display: block; margin-bottom: 4px;">${escapeHtml(vuln.title)}</strong>
+          <div style="font-size: 11px; color: #808080; font-family: sans-serif;">
+            Script: <code style="background: #1a1a1a; padding: 2px 6px; border: 1px solid #404040;">${escapeHtml(vuln.script || 'unknown')}</code>
+          </div>
         </div>
-        ${analysis?.remediationSteps.length ? `
-          <div class="remediation">
-            <h4>Remediation</h4>
-            <ul>
-              ${analysis.remediationSteps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}
-            </ul>
+        
+        ${analysis?.plainEnglishSummary ? `
+          <div style="margin-bottom: 12px; padding: 8px; background: #1a1a1a; border-left: 3px solid #c4b5fd; font-size: 11px; line-height: 1.6;">
+            <strong style="color: #c4b5fd; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em;">Summary</strong><br>
+            ${escapeHtml(analysis.plainEnglishSummary)}
+          </div>
+        ` : `
+          <div style="margin-bottom: 12px; font-size: 11px; color: #a0a0a0; line-height: 1.6;">
+            ${escapeHtml(vuln.description)}
+          </div>
+        `}
+        
+        ${affectedUrls.length > 0 ? `
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 10px; text-transform: uppercase; color: #c4b5fd; letter-spacing: 0.05em; margin-bottom: 4px;">Affected Endpoints</div>
+            ${affectedUrls.slice(0, 5).map(url => `
+              <div style="font-size: 10px; font-family: monospace; padding: 4px 6px; background: #1a1a1a; border: 1px solid #404040; margin-bottom: 2px; word-break: break-all;">
+                <a href="${escapeHtml(url)}" target="_blank" style="color: #22c55e; text-decoration: none;">${escapeHtml(url)}</a>
+              </div>
+            `).join('')}
+            ${affectedUrls.length > 5 ? `<div style="font-size: 10px; color: #606060; margin-top: 4px;">+ ${affectedUrls.length - 5} more</div>` : ''}
           </div>
         ` : ''}
+        
+        ${analysis?.severityJustification ? `
+          <div style="margin-bottom: 12px; padding: 8px; background: #1a1a1a; border-left: 3px solid ${colors.bg}; font-size: 10px; line-height: 1.5;">
+            <strong style="text-transform: uppercase; letter-spacing: 0.05em;">Risk Analysis</strong><br>
+            ${escapeHtml(analysis.severityJustification)}
+          </div>
+        ` : ''}
+        
+        ${analysis?.remediationSteps.length ? `
+          <div class="remediation" style="margin-top: 12px;">
+            <h4 style="font-size: 11px; text-transform: uppercase; color: #22c55e; margin-bottom: 8px; letter-spacing: 0.05em;">Remediation Steps</h4>
+            <ol style="margin-left: 20px; font-size: 11px; line-height: 1.7;">
+              ${analysis.remediationSteps.map(step => `<li style="margin-bottom: 6px;">${escapeHtml(step)}</li>`).join('')}
+            </ol>
+          </div>
+        ` : ''}
+        
+        ${vuln.output && vuln.output.length < 1000 ? `
+          <details style="margin-top: 12px; font-size: 10px;">
+            <summary style="cursor: pointer; color: #808080; user-select: none;">Technical Details</summary>
+            <pre style="margin-top: 8px; padding: 8px; background: #1a1a1a; border: 1px solid #404040; overflow-x: auto; font-size: 9px; line-height: 1.4; color: #a0a0a0; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(vuln.output)}</pre>
+          </details>
+        ` : ''}
       </td>
-      <td>${vuln.port || '—'}</td>
-      <td style="font-size: 11px;">${escapeHtml(vuln.service || '—')}</td>
+      <td style="width: 80px; font-size: 11px;">${vuln.port || '—'}</td>
+      <td style="width: 100px; font-size: 11px;">${escapeHtml(vuln.service || '—')}</td>
     </tr>
   `
 }
@@ -517,15 +569,23 @@ function generateRemediationSection(scan: NmapScanData): string {
   return vulnsByPriority.map(({ vuln, analysis }, index) => {
     const colors = SEVERITY_COLORS[vuln.severity] || SEVERITY_COLORS.info
     return `
-      <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #2a2a2a;">
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-          <span style="font-size: 18px; color: #606060; font-weight: bold;">#${index + 1}</span>
-          <span class="severity-badge" style="background: ${colors.bg}; color: ${colors.text}">${vuln.severity}</span>
-          <strong>${escapeHtml(vuln.title)}</strong>
+      <div style="margin-bottom: 24px; padding: 16px; border: 1px solid #404040; background: #1a1a1a;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <span style="font-size: 20px; color: #c4b5fd; font-weight: bold;">#${index + 1}</span>
+          <span class="severity-badge" style="background: ${colors.bg}; color: ${colors.text}">${vuln.severity.toUpperCase()}</span>
+          <strong style="font-size: 14px;">${escapeHtml(vuln.title)}</strong>
         </div>
-        <ul style="margin-left: 40px; font-size: 12px;">
-          ${analysis.remediationSteps.map((step: string) => `<li style="margin-bottom: 4px;">${escapeHtml(step)}</li>`).join('')}
-        </ul>
+        <div style="margin-bottom: 8px; font-size: 11px; color: #808080;">
+          Port: <strong>${vuln.port || 'N/A'}</strong> | 
+          Service: <strong>${escapeHtml(vuln.service || 'unknown')}</strong>
+          ${vuln.cve ? ` | CVE: <a href="https://nvd.nist.gov/vuln/detail/${vuln.cve}" target="_blank" style="color: #c4b5fd; text-decoration: none;">${vuln.cve}</a>` : ''}
+        </div>
+        <div style="padding: 12px; background: #0a0a0a; border-left: 3px solid #22c55e;">
+          <div style="font-size: 11px; text-transform: uppercase; color: #22c55e; margin-bottom: 8px; letter-spacing: 0.05em; font-weight: bold;">Action Required</div>
+          <ol style="margin-left: 20px; font-size: 12px; line-height: 1.8;">
+            ${analysis.remediationSteps.map((step: string) => `<li style="margin-bottom: 6px;">${escapeHtml(step)}</li>`).join('')}
+          </ol>
+        </div>
       </div>
     `
   }).join('')
