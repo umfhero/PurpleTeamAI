@@ -14,6 +14,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       // Return cleanup function
       return () => ipcRenderer.removeListener('scanner:progress', listener)
     },
+    onPhaseResult: (callback) => {
+      const listener = (_event, data) => callback(data)
+      ipcRenderer.on('scanner:phase-result', listener)
+      return () => ipcRenderer.removeListener('scanner:phase-result', listener)
+    },
   },
 
   // LLM APIs
