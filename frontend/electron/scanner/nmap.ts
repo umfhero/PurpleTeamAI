@@ -20,12 +20,12 @@ async function findNmapPath(): Promise<string> {
   // Return cached path if already found
   if (nmapPath) return nmapPath
 
-  const possiblePaths = process.platform === 'win32' 
+  const possiblePaths = process.platform === 'win32'
     ? [
-        'nmap', // Check PATH first
-        'C:\\Program Files (x86)\\Nmap\\nmap.exe',
-        'C:\\Program Files\\Nmap\\nmap.exe',
-      ]
+      'nmap', // Check PATH first
+      'C:\\Program Files (x86)\\Nmap\\nmap.exe',
+      'C:\\Program Files\\Nmap\\nmap.exe',
+    ]
     : ['nmap', '/usr/bin/nmap', '/usr/local/bin/nmap', '/opt/homebrew/bin/nmap']
 
   for (const testPath of possiblePaths) {
@@ -36,7 +36,7 @@ async function findNmapPath(): Promise<string> {
         testProcess.on('error', () => resolve(false))
         testProcess.on('close', (code) => resolve(code === 0))
       })
-      
+
       if (isValid) {
         nmapPath = testPath
         console.log(`[Scanner] Found Nmap at: ${testPath}`)
@@ -61,7 +61,7 @@ export function abortScan(): { success: boolean; message: string } {
   if (!currentScanProcess) {
     return { success: false, message: 'No scan is currently running' }
   }
-  
+
   scanAborted = true
   currentScanProcess.kill('SIGTERM')
   currentScanProcess = null
@@ -356,18 +356,18 @@ export async function getScanHistory(): Promise<NmapScanData[]> {
       try {
         const content = await fs.readFile(path.join(SCANS_DIR, file), 'utf-8')
         const scanData = JSON.parse(content) as NmapScanData
-        
+
         // Calculate security score if missing (for old scans)
         if (!scanData.securityScore && scanData.vulnerabilities) {
           const hasLLMAnalysis = !!scanData.llmAnalysis
           scanData.securityScore = calculateSecurityScore(scanData, hasLLMAnalysis)
           scanData.owaspCoverage = getOWASPCoverage(scanData.vulnerabilities)
           scanData.owaspDistribution = getOWASPDistribution(scanData.vulnerabilities)
-          
+
           // Save updated scan with scores
           await fs.writeFile(path.join(SCANS_DIR, file), JSON.stringify(scanData, null, 2))
         }
-        
+
         scans.push(scanData)
       } catch {
         // Skip invalid files
@@ -403,3 +403,36 @@ export async function validateTarget(target: string): Promise<{ allowed: boolean
     return { allowed: isAllowed, target }
   }
 }
+
+/**
+ * Delete a scan by timestamp
+ */
+export async function deleteScan(timestamp: string): Promise<{ success: boolean; message?: string }> {
+  await ensureScansDir()
+
+  try {
+    // Find files with this timestamp
+    const files = await fs.readdir(SCANS_DIR)
+    const scanFiles = files.filter(f => f.includes(timestamp))
+
+    if (scanFiles.length === 0) {
+      return { success: false, message: 'Scan not found' }
+    }
+
+    // Delete all related files (JSON + XML)
+    for (const file of scanFiles) {
+      const filePath = path.join(SCANS_DIR, file)
+      await fs.unlink(filePath)
+      console.log(`[Scanner] Deleted scan file: ${file}`)
+    }
+
+    return { success: true, message: `Deleted ${scanFiles.length} scan file(s)` }
+  } catch (err) {
+    console.error('[Scanner] Failed to delete scan:', err)
+    return {
+      success: false,
+      message: `Failed to delete scan: ${err instanceof Error ? err.message : 'Unknown error'}`
+    }
+  }
+}
+

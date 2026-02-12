@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getHistory: () => ipcRenderer.invoke('scanner:get-history'),
     validateTarget: (target: string) => ipcRenderer.invoke('scanner:validate-target', target),
     abort: () => ipcRenderer.invoke('scanner:abort'),
+    deleteScan: (timestamp: string) => ipcRenderer.invoke('scanner:delete-scan', timestamp),
     onProgress: (callback: (line: string) => void) => {
       const listener = (_event: unknown, line: string) => callback(line)
       ipcRenderer.on('scanner:progress', listener)

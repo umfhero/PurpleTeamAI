@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { config } from 'dotenv'
-import { runNmapScan, getScanHistory, validateTarget, abortScan } from './scanner'
+import { runNmapScan, getScanHistory, validateTarget, abortScan, deleteScan } from './scanner'
 import { GeminiClient } from './llm'
 import { exportReport } from './reports'
 import type { LLMAnalysisRequest } from './llm'
@@ -13,7 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // Load environment variables from .env file in the project root
 // In development, .env is at project root (two levels up from dist-electron)
 // In production, it should be bundled or use a different approach
-const envPath = app.isPackaged 
+const envPath = app.isPackaged
   ? path.join(process.resourcesPath, '.env')
   : path.join(__dirname, '../../.env')
 
@@ -30,7 +30,7 @@ let mainWindow: BrowserWindow | null = null
 
 function createWindow() {
   // Icon path for both dev and production
-  const iconPath = VITE_DEV_SERVER_URL 
+  const iconPath = VITE_DEV_SERVER_URL
     ? path.join(__dirname, '../public/icon.png')
     : path.join(process.resourcesPath, 'icon.png')
 
@@ -107,16 +107,16 @@ app.on('window-all-closed', () => {
 ipcMain.handle('scanner:run-nmap', async (event, options: { target: string }) => {
   const { target } = options
   console.log(`[IPC] Received scan request for: ${target}`)
-  
+
   // First validate the target
   const validation = await validateTarget(target)
   if (!validation.allowed) {
     console.log(`[IPC] Target validation failed: ${target}`)
     return { success: false, message: `Target "${target}" is not in the allowlist` }
   }
-  
+
   console.log(`[IPC] Target validated, starting progressive scan...`)
-  
+
   // Run the scan with progress + phase callbacks
   const result = await runNmapScan(
     { target },
@@ -129,7 +129,7 @@ ipcMain.handle('scanner:run-nmap', async (event, options: { target: string }) =>
       event.sender.send('scanner:phase-result', phaseData)
     },
   )
-  
+
   console.log(`[IPC] Scan completed: ${result.success ? 'success' : 'failed'}`)
   return result
 })
@@ -152,6 +152,12 @@ ipcMain.handle('scanner:abort', () => {
   return abortScan()
 })
 
+// Delete a scan
+ipcMain.handle('scanner:delete-scan', async (_event, timestamp: string) => {
+  console.log(`[IPC] Received delete scan request for timestamp: ${timestamp}`)
+  return deleteScan(timestamp)
+})
+
 // ============================================
 // IPC Handlers - LLM Analysis
 // ============================================
@@ -159,7 +165,7 @@ ipcMain.handle('scanner:abort', () => {
 // Analyze vulnerabilities with Gemini
 ipcMain.handle('llm:analyze-vulnerabilities', async (_event, request: LLMAnalysisRequest) => {
   console.log(`[IPC] Received LLM analysis request for ${request.vulnerabilities.length} vulnerabilities`)
-  
+
   try {
     // Get API key from environment
     const apiKey = process.env.GEMINI_API_KEY
@@ -169,7 +175,7 @@ ipcMain.handle('llm:analyze-vulnerabilities', async (_event, request: LLMAnalysi
 
     const client = new GeminiClient({ apiKey })
     const result = await client.analyzeVulnerabilities(request)
-    
+
     console.log(`[IPC] LLM analysis complete: ${result.success ? 'success' : 'failed'}`)
     return result
   } catch (error) {
@@ -189,7 +195,7 @@ ipcMain.handle('llm:analyze-vulnerabilities', async (_event, request: LLMAnalysi
 // Export report
 ipcMain.handle('report:export', async (_event, options: ReportOptions) => {
   console.log(`[IPC] Received report export request for: ${options.scan.target}`)
-  
+
   try {
     const result = await exportReport(options)
     console.log(`[IPC] Report export ${result.success ? 'succeeded' : 'failed'}: ${result.filePath || result.error}`)

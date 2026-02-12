@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { AlertTriangle, Target, Search, Shield, Zap, ChevronDown, ChevronRight, FileText } from 'lucide-react'
+import { AlertTriangle, Target, Search, Shield, Zap, ChevronDown, ChevronRight, FileText, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import type { NmapScanData, VulnerabilityResult } from '../types/electron.d'
 import SecurityScoreCard from '../components/SecurityScoreCard'
@@ -11,57 +11,57 @@ type SortOrder = 'asc' | 'desc'
 const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
 
 const getSeverityBg = (severity: string) => {
-  switch (severity) {
-    case 'critical': return 'bg-[oklch(0.55_0.22_25)]'
-    case 'high': return 'bg-[oklch(0.65_0.25_45)]'
-    case 'medium': return 'bg-[oklch(0.70_0.15_85)]'
-    case 'low': return 'bg-[oklch(0.55_0.15_150)]'
-    default: return 'bg-[oklch(0.60_0.015_80)]'
-  }
+    switch (severity) {
+        case 'critical': return 'bg-[oklch(0.55_0.22_25)]'
+        case 'high': return 'bg-[oklch(0.65_0.25_45)]'
+        case 'medium': return 'bg-[oklch(0.70_0.15_85)]'
+        case 'low': return 'bg-[oklch(0.55_0.15_150)]'
+        default: return 'bg-[oklch(0.60_0.015_80)]'
+    }
 }
 
 // Generate a detailed CVE explanation
 const getCVEExplanation = (vuln: VulnerabilityResult): string | null => {
-  if (!vuln.cve) return null
-  
-  // Pattern: "According to {CVE}, {service/software} is vulnerable to {attack type}."
-  const attackTypes: Record<string, string> = {
-    'path traversal': 'Path Traversal and potential Remote Code Execution attacks',
-    'traversal': 'Path Traversal attacks allowing unauthorized file access',
-    'memory': 'memory disclosure attacks that could expose sensitive data',
-    'buffer': 'buffer overflow attacks that could lead to code execution',
-    'injection': 'injection attacks that could compromise the system',
-    'xss': 'Cross-Site Scripting (XSS) attacks',
-    'sql': 'SQL Injection attacks',
-    'rce': 'Remote Code Execution attacks',
-    'dos': 'Denial of Service attacks',
-    'overflow': 'buffer overflow attacks',
-    'default': 'security vulnerabilities that could be exploited by attackers'
-  }
-  
-  const descLower = vuln.description.toLowerCase()
-  let attackType = attackTypes.default
-  
-  for (const [keyword, attack] of Object.entries(attackTypes)) {
-    if (keyword !== 'default' && descLower.includes(keyword)) {
-      attackType = attack
-      break
+    if (!vuln.cve) return null
+
+    // Pattern: "According to {CVE}, {service/software} is vulnerable to {attack type}."
+    const attackTypes: Record<string, string> = {
+        'path traversal': 'Path Traversal and potential Remote Code Execution attacks',
+        'traversal': 'Path Traversal attacks allowing unauthorized file access',
+        'memory': 'memory disclosure attacks that could expose sensitive data',
+        'buffer': 'buffer overflow attacks that could lead to code execution',
+        'injection': 'injection attacks that could compromise the system',
+        'xss': 'Cross-Site Scripting (XSS) attacks',
+        'sql': 'SQL Injection attacks',
+        'rce': 'Remote Code Execution attacks',
+        'dos': 'Denial of Service attacks',
+        'overflow': 'buffer overflow attacks',
+        'default': 'security vulnerabilities that could be exploited by attackers'
     }
-  }
-  
-  const service = vuln.service || 'the target service'
-  return `According to ${vuln.cve}, ${service} is vulnerable to ${attackType}.`
+
+    const descLower = vuln.description.toLowerCase()
+    let attackType = attackTypes.default
+
+    for (const [keyword, attack] of Object.entries(attackTypes)) {
+        if (keyword !== 'default' && descLower.includes(keyword)) {
+            attackType = attack
+            break
+        }
+    }
+
+    const service = vuln.service || 'the target service'
+    return `According to ${vuln.cve}, ${service} is vulnerable to ${attackType}.`
 }
 
 // Get scan stats for a scan
 const getScanStats = (scan: NmapScanData) => {
-  const critical = scan.vulnerabilities.filter(v => v.severity === 'critical').length
-  const high = scan.vulnerabilities.filter(v => v.severity === 'high').length
-  const medium = scan.vulnerabilities.filter(v => v.severity === 'medium').length
-  const low = scan.vulnerabilities.filter(v => v.severity === 'low').length
-  const openPorts = scan.ports.filter(p => p.state === 'open')
-  const portDetails = openPorts.map(p => `${p.port}/${p.protocol} (${p.service || 'unknown'})`)
-  return { critical, high, medium, low, total: scan.vulnerabilities.length, ports: openPorts.length, portDetails }
+    const critical = scan.vulnerabilities.filter(v => v.severity === 'critical').length
+    const high = scan.vulnerabilities.filter(v => v.severity === 'high').length
+    const medium = scan.vulnerabilities.filter(v => v.severity === 'medium').length
+    const low = scan.vulnerabilities.filter(v => v.severity === 'low').length
+    const openPorts = scan.ports.filter(p => p.state === 'open')
+    const portDetails = openPorts.map(p => `${p.port}/${p.protocol} (${p.service || 'unknown'})`)
+    return { critical, high, medium, low, total: scan.vulnerabilities.length, ports: openPorts.length, portDetails }
 }
 
 export default function Dashboard() {
@@ -73,6 +73,7 @@ export default function Dashboard() {
     const [searchTerm, setSearchTerm] = useState('')
     const [loading, setLoading] = useState(true)
     const [expandedOutputs, setExpandedOutputs] = useState<Set<string>>(new Set())
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; scan: NmapScanData } | null>(null)
 
     const toggleOutput = (vulnId: string) => {
         setExpandedOutputs(prev => {
@@ -85,6 +86,15 @@ export default function Dashboard() {
             return next
         })
     }
+
+    // Close context menu on outside click
+    useEffect(() => {
+        const handleClickOutside = () => setContextMenu(null)
+        if (contextMenu) {
+            document.addEventListener('click', handleClickOutside)
+            return () => document.removeEventListener('click', handleClickOutside)
+        }
+    }, [contextMenu])
 
     const handleViewReport = () => {
         if (!selectedScan) return
@@ -100,9 +110,15 @@ export default function Dashboard() {
         try {
             if (window.electronAPI) {
                 const scans = await window.electronAPI.scanner.getHistory()
-                setScanHistory(scans)
-                if (scans.length > 0) {
-                    setSelectedScan(scans[0])
+                // Sort by security score (lower score = worse, should be first)
+                const sortedScans = scans.sort((a, b) => {
+                    const scoreA = a.securityScore?.overall ?? 0
+                    const scoreB = b.securityScore?.overall ?? 0
+                    return scoreA - scoreB // Ascending order (worst first)
+                })
+                setScanHistory(sortedScans)
+                if (sortedScans.length > 0) {
+                    setSelectedScan(sortedScans[0])
                 }
             } else {
                 // Development fallback with demo data
@@ -153,6 +169,32 @@ export default function Dashboard() {
         }
     }
 
+    const handleContextMenu = (e: React.MouseEvent, scan: NmapScanData) => {
+        e.preventDefault()
+        setContextMenu({ x: e.clientX, y: e.clientY, scan })
+    }
+
+    const handleDeleteScan = async (scan: NmapScanData) => {
+        if (!window.electronAPI?.scanner) return
+
+        try {
+            await window.electronAPI.scanner.deleteScan(scan.timestamp)
+
+            // Update local state
+            const updatedScans = scanHistory.filter(s => s.timestamp !== scan.timestamp)
+            setScanHistory(updatedScans)
+
+            // If deleted scan was selected, select another one
+            if (selectedScan?.timestamp === scan.timestamp) {
+                setSelectedScan(updatedScans.length > 0 ? updatedScans[0] : null)
+            }
+
+            setContextMenu(null)
+        } catch (error) {
+            console.error('Failed to delete scan:', error)
+        }
+    }
+
     const handleSort = (field: SortField) => {
         if (sortField === field) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
@@ -164,7 +206,7 @@ export default function Dashboard() {
 
     const getSortedVulnerabilities = () => {
         if (!selectedScan) return []
-        
+
         const filtered = selectedScan.vulnerabilities.filter(vuln => {
             if (!searchTerm) return true
             const term = searchTerm.toLowerCase()
@@ -178,7 +220,7 @@ export default function Dashboard() {
 
         return filtered.sort((a, b) => {
             let aVal: string | number, bVal: string | number
-            
+
             switch (sortField) {
                 case 'severity':
                     aVal = severityOrder[a.severity]
@@ -248,11 +290,11 @@ export default function Dashboard() {
                             <button
                                 key={scan.timestamp}
                                 onClick={() => setSelectedScan(scan)}
-                                className={`w-full text-left px-3 py-2 border-b border-border transition-colors font-mono text-xs ${
-                                    selectedScan?.timestamp === scan.timestamp
+                                onContextMenu={(e) => handleContextMenu(e, scan)}
+                                className={`w-full text-left px-3 py-2 border-b border-border transition-colors font-mono text-xs ${selectedScan?.timestamp === scan.timestamp
                                         ? 'bg-primary/10 text-foreground'
                                         : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                                }`}
+                                    }`}
                             >
                                 <div className="font-semibold truncate text-sm">{scan.target}</div>
                                 <div className="text-[10px] mt-0.5 opacity-60">{new Date(scan.timestamp).toLocaleString()}</div>
@@ -293,9 +335,9 @@ export default function Dashboard() {
                         {/* OWASP Coverage */}
                         {selectedScan?.owaspCoverage && selectedScan?.owaspDistribution && (
                             <div className="flex-1 border-b border-border">
-                                <OWASPCoverageMatrix 
-                                    coverage={selectedScan.owaspCoverage} 
-                                    distribution={selectedScan.owaspDistribution} 
+                                <OWASPCoverageMatrix
+                                    coverage={selectedScan.owaspCoverage}
+                                    distribution={selectedScan.owaspDistribution}
                                 />
                             </div>
                         )}
@@ -311,125 +353,125 @@ export default function Dashboard() {
                                     type="text"
                                     placeholder="Search vulnerabilities..."
                                     value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-1.5 bg-input border border-border text-foreground font-mono text-xs
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-1.5 bg-input border border-border text-foreground font-mono text-xs
                                          placeholder:text-muted-foreground focus:outline-none focus:border-primary"
-                            />
+                                />
+                            </div>
+                        </div>
+
+                        {/* Vulnerability List */}
+                        <div className="flex-1 overflow-auto">
+                            {sortedVulns.length === 0 ? (
+                                <div className="p-8 text-center text-muted-foreground font-mono text-sm">
+                                    {searchTerm ? 'No vulnerabilities match your search' : 'No vulnerabilities found'}
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-border">
+                                    {sortedVulns.map((vuln) => {
+                                        const cveExplanation = getCVEExplanation(vuln)
+                                        const analysis = selectedScan?.llmAnalysis?.analyses?.find(a => a.vulnerabilityId === vuln.id)
+                                        const isOutputExpanded = expandedOutputs.has(vuln.id)
+
+                                        return (
+                                            <div key={vuln.id} className="p-4 hover:bg-muted/50">
+                                                {/* Header Row */}
+                                                <div className="flex items-start gap-3">
+                                                    <span className={`inline-block px-2 py-0.5 text-[10px] uppercase font-bold ${getSeverityBg(vuln.severity)} text-background`}>
+                                                        {vuln.severity}
+                                                    </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="font-mono font-semibold text-sm">{vuln.title}</span>
+                                                            {vuln.cve && (
+                                                                <span className="text-xs font-mono text-primary">{vuln.cve}</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground mt-0.5 font-mono">
+                                                            Port {vuln.port || '-'} • {vuln.service || 'Unknown service'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* CVE Explanation - prominent at glance */}
+                                                {cveExplanation && (
+                                                    <div className="mt-2 text-xs font-mono text-primary/90 italic">
+                                                        {cveExplanation}
+                                                    </div>
+                                                )}
+
+                                                {/* Description - shorter line */}
+                                                <div className="mt-2 text-xs font-mono text-foreground/70 line-clamp-2">
+                                                    {vuln.description}
+                                                </div>
+
+                                                {/* Collapsible Raw Output */}
+                                                {vuln.output && (
+                                                    <div className="mt-3">
+                                                        <button
+                                                            onClick={() => toggleOutput(vuln.id)}
+                                                            className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                                                        >
+                                                            {isOutputExpanded ? (
+                                                                <ChevronDown className="w-3 h-3" />
+                                                            ) : (
+                                                                <ChevronRight className="w-3 h-3" />
+                                                            )}
+                                                            Raw Output
+                                                        </button>
+                                                        {isOutputExpanded && (
+                                                            <pre className="mt-1 p-2 bg-input border border-border overflow-x-auto text-[10px] font-mono max-h-40 overflow-y-auto">
+                                                                {vuln.output}
+                                                            </pre>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* AI Analysis */}
+                                                {analysis && (
+                                                    <div className="mt-4 pt-3 border-t border-border space-y-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">AI Analysis</span>
+                                                            <span className="text-[10px] text-muted-foreground">({(analysis.confidenceScore * 100).toFixed(0)}% confidence)</span>
+                                                        </div>
+
+                                                        <p className="text-xs font-mono text-foreground/80">{analysis.plainEnglishSummary}</p>
+
+                                                        {analysis.affectedEndpoints.length > 0 && (
+                                                            <div>
+                                                                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Affected Endpoints</div>
+                                                                <ul className="mt-1 text-xs font-mono list-disc list-inside text-foreground/70">
+                                                                    {analysis.affectedEndpoints.map((endpoint, idx) => (
+                                                                        <li key={idx}>{endpoint}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+
+                                                        <div>
+                                                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Remediation</div>
+                                                            <ol className="mt-1 text-xs font-mono list-decimal list-inside text-foreground/70 space-y-0.5">
+                                                                {analysis.remediationSteps.map((step, idx) => (
+                                                                    <li key={idx}>{step}</li>
+                                                                ))}
+                                                            </ol>
+                                                        </div>
+
+                                                        {analysis.owaspCategory && (
+                                                            <div className="flex items-center gap-2 text-xs">
+                                                                <span className="text-muted-foreground">OWASP:</span>
+                                                                <span className="text-primary font-semibold">{analysis.owaspCategory}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </div>
-
-                    {/* Vulnerability List */}
-                    <div className="flex-1 overflow-auto">
-                        {sortedVulns.length === 0 ? (
-                            <div className="p-8 text-center text-muted-foreground font-mono text-sm">
-                                {searchTerm ? 'No vulnerabilities match your search' : 'No vulnerabilities found'}
-                            </div>
-                        ) : (
-                            <div className="divide-y divide-border">
-                                {sortedVulns.map((vuln) => {
-                                    const cveExplanation = getCVEExplanation(vuln)
-                                    const analysis = selectedScan?.llmAnalysis?.analyses?.find(a => a.vulnerabilityId === vuln.id)
-                                    const isOutputExpanded = expandedOutputs.has(vuln.id)
-                                    
-                                    return (
-                                        <div key={vuln.id} className="p-4 hover:bg-muted/50">
-                                            {/* Header Row */}
-                                            <div className="flex items-start gap-3">
-                                                <span className={`inline-block px-2 py-0.5 text-[10px] uppercase font-bold ${getSeverityBg(vuln.severity)} text-background`}>
-                                                    {vuln.severity}
-                                                </span>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-mono font-semibold text-sm">{vuln.title}</span>
-                                                        {vuln.cve && (
-                                                            <span className="text-xs font-mono text-primary">{vuln.cve}</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-xs text-muted-foreground mt-0.5 font-mono">
-                                                        Port {vuln.port || '-'} • {vuln.service || 'Unknown service'}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* CVE Explanation - prominent at glance */}
-                                            {cveExplanation && (
-                                                <div className="mt-2 text-xs font-mono text-primary/90 italic">
-                                                    {cveExplanation}
-                                                </div>
-                                            )}
-
-                                            {/* Description - shorter line */}
-                                            <div className="mt-2 text-xs font-mono text-foreground/70 line-clamp-2">
-                                                {vuln.description}
-                                            </div>
-
-                                            {/* Collapsible Raw Output */}
-                                            {vuln.output && (
-                                                <div className="mt-3">
-                                                    <button
-                                                        onClick={() => toggleOutput(vuln.id)}
-                                                        className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-                                                    >
-                                                        {isOutputExpanded ? (
-                                                            <ChevronDown className="w-3 h-3" />
-                                                        ) : (
-                                                            <ChevronRight className="w-3 h-3" />
-                                                        )}
-                                                        Raw Output
-                                                    </button>
-                                                    {isOutputExpanded && (
-                                                        <pre className="mt-1 p-2 bg-input border border-border overflow-x-auto text-[10px] font-mono max-h-40 overflow-y-auto">
-                                                            {vuln.output}
-                                                        </pre>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* AI Analysis */}
-                                            {analysis && (
-                                                <div className="mt-4 pt-3 border-t border-border space-y-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">AI Analysis</span>
-                                                        <span className="text-[10px] text-muted-foreground">({(analysis.confidenceScore * 100).toFixed(0)}% confidence)</span>
-                                                    </div>
-                                                    
-                                                    <p className="text-xs font-mono text-foreground/80">{analysis.plainEnglishSummary}</p>
-
-                                                    {analysis.affectedEndpoints.length > 0 && (
-                                                        <div>
-                                                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Affected Endpoints</div>
-                                                            <ul className="mt-1 text-xs font-mono list-disc list-inside text-foreground/70">
-                                                                {analysis.affectedEndpoints.map((endpoint, idx) => (
-                                                                    <li key={idx}>{endpoint}</li>
-                                                                ))}
-                                                            </ul>
-                                                        </div>
-                                                    )}
-
-                                                    <div>
-                                                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Remediation</div>
-                                                        <ol className="mt-1 text-xs font-mono list-decimal list-inside text-foreground/70 space-y-0.5">
-                                                            {analysis.remediationSteps.map((step, idx) => (
-                                                                <li key={idx}>{step}</li>
-                                                            ))}
-                                                        </ol>
-                                                    </div>
-
-                                                    {analysis.owaspCategory && (
-                                                        <div className="flex items-center gap-2 text-xs">
-                                                            <span className="text-muted-foreground">OWASP:</span>
-                                                            <span className="text-primary font-semibold">{analysis.owaspCategory}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        )}
-                    </div>
-                </div>
                 </div>
 
                 {/* Stats Bar - Fixed to bottom */}
@@ -467,6 +509,24 @@ export default function Dashboard() {
                     </div>
                 )}
             </div>
+
+            {/* Custom Context Menu */}
+            {contextMenu && (
+                <div
+                    className="fixed bg-card border border-border shadow-lg z-50 min-w-[160px]"
+                    style={{ top: contextMenu.y, left: contextMenu.x }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <button
+                        onClick={() => handleDeleteScan(contextMenu.scan)}
+                        className="w-full text-left px-4 py-2 hover:bg-destructive/10 hover:text-destructive 
+                                   transition-colors flex items-center gap-2 font-mono text-xs"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        Delete Scan
+                    </button>
+                </div>
+            )}
         </div>
     )
 }

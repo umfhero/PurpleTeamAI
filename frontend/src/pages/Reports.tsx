@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { FileText, ArrowRight, Loader2, AlertTriangle, FileDown, Calendar, ChevronRight } from 'lucide-react'
+import { FileText, ArrowRight, Loader2, AlertTriangle, FileDown, Calendar, ChevronRight, Trash2 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import type { NmapScanData } from '../types/electron.d'
 import ReportViewer from '../components/ReportViewer'
@@ -19,6 +19,7 @@ export default function Reports() {
   const [selectedScan, setSelectedScan] = useState<NmapScanData | null>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; scan: NmapScanData } | null>(null)
 
   useEffect(() => {
     loadScanHistory()
@@ -35,23 +36,38 @@ export default function Reports() {
     }
   }, [location.state, scanHistory])
 
+  // Close context menu on outside click
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null)
+    if (contextMenu) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [contextMenu])
+
   const loadScanHistory = async () => {
     try {
       if (window.electronAPI?.scanner) {
         const scans = await window.electronAPI.scanner.getHistory()
-        setScanHistory(scans)
-        
+        // Sort by security score (lower score = worse, should be first)
+        const sortedScans = scans.sort((a, b) => {
+          const scoreA = a.securityScore?.overall ?? 0
+          const scoreB = b.securityScore?.overall ?? 0
+          return scoreA - scoreB // Ascending order (worst first)
+        })
+        setScanHistory(sortedScans)
+
         // Check if we should auto-select from navigation state
         const state = location.state as { scanTimestamp?: string } | null
         if (state?.scanTimestamp) {
-          const scan = scans.find(s => s.timestamp === state.scanTimestamp)
+          const scan = sortedScans.find(s => s.timestamp === state.scanTimestamp)
           if (scan) {
             setSelectedScan(scan)
-          } else if (scans.length > 0) {
-            setSelectedScan(scans[0])
+          } else if (sortedScans.length > 0) {
+            setSelectedScan(sortedScans[0])
           }
-        } else if (scans.length > 0) {
-          setSelectedScan(scans[0])
+        } else if (sortedScans.length > 0) {
+          setSelectedScan(sortedScans[0])
         }
       }
     } catch (error) {
@@ -61,9 +77,36 @@ export default function Reports() {
     }
   }
 
+  const handleContextMenu = (e: React.MouseEvent, scan: NmapScanData) => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY, scan })
+  }
+
+  const handleDeleteScan = async (scan: NmapScanData) => {
+    if (!window.electronAPI?.scanner) return
+
+    try {
+      // Call delete API (you'll need to implement this in the backend)
+      await window.electronAPI.scanner.deleteScan(scan.timestamp)
+
+      // Update local state
+      const updatedScans = scanHistory.filter(s => s.timestamp !== scan.timestamp)
+      setScanHistory(updatedScans)
+
+      // If deleted scan was selected, select another one
+      if (selectedScan?.timestamp === scan.timestamp) {
+        setSelectedScan(updatedScans.length > 0 ? updatedScans[0] : null)
+      }
+
+      setContextMenu(null)
+    } catch (error) {
+      console.error('Failed to delete scan:', error)
+    }
+  }
+
   const handleExportReport = async () => {
     if (!selectedScan || !window.electronAPI?.report) return
-    
+
     setExporting(true)
     try {
       await window.electronAPI.report.export({ scan: selectedScan, format: 'html' })
@@ -91,7 +134,7 @@ export default function Reports() {
             Scan History ({scanHistory.length})
           </h3>
         </div>
-        
+
         {scanHistory.length > 0 ? (
           <div className="flex-1 overflow-auto">
             {scanHistory.map((scan) => {
@@ -99,16 +142,16 @@ export default function Reports() {
               const vulnCount = scan.vulnerabilities.length
               const criticalCount = scan.vulnerabilities.filter(v => v.severity === 'critical').length
               const highCount = scan.vulnerabilities.filter(v => v.severity === 'high').length
-              
+
               return (
                 <button
                   key={scan.timestamp}
                   onClick={() => setSelectedScan(scan)}
-                  className={`w-full text-left p-3 border-b border-border transition-colors ${
-                    isSelected 
-                      ? 'bg-primary/10 border-l-2 border-l-primary' 
-                      : 'hover:bg-muted/30'
-                  }`}
+                  onContextMenu={(e) => handleContextMenu(e, scan)}
+                  className={`w-full text-left p-3 border-b border-border transition-colors ${isSelected
+                    ? 'bg-primary/10 border-l-2 border-l-primary'
+                    : 'hover:bg-muted/30'
+                    }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
@@ -209,6 +252,24 @@ export default function Reports() {
           </div>
         )}
       </div>
+
+      {/* Custom Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed bg-card border border-border shadow-lg z-50 min-w-[160px]"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => handleDeleteScan(contextMenu.scan)}
+            className="w-full text-left px-4 py-2 hover:bg-destructive/10 hover:text-destructive 
+                       transition-colors flex items-center gap-2 font-mono text-xs"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete Scan
+          </button>
+        </div>
+      )}
     </div>
   )
 }

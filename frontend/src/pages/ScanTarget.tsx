@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Crosshair, AlertTriangle, Check, Loader2, ArrowRight, Brain, Zap, Circle, ChevronDown, ChevronUp, Square } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useScanStore } from '../lib/useScanStore'
@@ -16,32 +16,22 @@ const PROGRESS_STEPS = [
 
 // Progress Stepper Component
 function ScanProgressStepper({ currentState, scanLogs }: { currentState: ScanState; scanLogs: string[] }) {
-  const [visibleSteps, setVisibleSteps] = useState<number>(0)
-  
+  const terminalRef = useRef<HTMLDivElement>(null)
+
   // Get the current step index
   const getCurrentStepIndex = () => {
     if (currentState === 'idle' || currentState === 'error') return -1
     return PROGRESS_STEPS.findIndex(step => step.id === currentState)
   }
-  
+
   const currentIndex = getCurrentStepIndex()
-  
-  // Stagger reveal animation - reveal steps one by one
+
+  // Auto-scroll terminal to bottom when new logs appear
   useEffect(() => {
-    if (currentIndex >= 0) {
-      const timer = setTimeout(() => {
-        setVisibleSteps(prev => Math.min(prev + 1, currentIndex + 1))
-      }, 100)
-      return () => clearTimeout(timer)
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight
     }
-  }, [currentIndex])
-  
-  // Reset visible steps when going back to idle
-  useEffect(() => {
-    if (currentState === 'idle') {
-      setVisibleSteps(0)
-    }
-  }, [currentState])
+  }, [scanLogs])
 
   if (currentState === 'idle' || currentState === 'error') return null
 
@@ -51,32 +41,26 @@ function ScanProgressStepper({ currentState, scanLogs }: { currentState: ScanSta
       <div className="border-b border-border p-4">
         <h3 className="text-sm font-mono uppercase tracking-wider text-muted-foreground">Scan Progress</h3>
       </div>
-      
+
       {/* Progress Steps */}
-      <div className="p-4">
-        <div className="flex items-center justify-between gap-2">
+      <div>
+        <div className="flex items-stretch justify-between gap-0">
           {PROGRESS_STEPS.map((step, index) => {
             const isActive = step.id === currentState
             const isComplete = currentIndex > index
-            const isVisible = index <= visibleSteps
-            
+
             return (
-              <div 
+              <div
                 key={step.id}
-                className={`flex-1 transition-all duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-                style={{ 
-                  animationDelay: `${index * 100}ms`,
-                  transitionDelay: `${index * 50}ms`
-                }}
+                className="flex-1 transition-all duration-300"
               >
                 {/* Step Item */}
-                <div className={`border p-3 transition-colors ${
-                  isActive 
-                    ? 'border-primary bg-primary/10' 
-                    : isComplete 
-                      ? 'border-[hsl(var(--low))] bg-[hsl(var(--low))]/10' 
-                      : 'border-border bg-muted/30'
-                }`}>
+                <div className={`border p-3 transition-colors h-full flex flex-col ${isActive
+                  ? 'border-primary bg-primary/10'
+                  : isComplete
+                    ? 'border-[hsl(var(--low))] bg-[hsl(var(--low))]/10'
+                    : 'border-border bg-muted/30'
+                  }`}>
                   <div className="flex items-center gap-2 mb-1">
                     {isComplete ? (
                       <Check className="w-4 h-4 text-[hsl(var(--low))]" />
@@ -85,9 +69,8 @@ function ScanProgressStepper({ currentState, scanLogs }: { currentState: ScanSta
                     ) : (
                       <Circle className="w-4 h-4 text-muted-foreground" />
                     )}
-                    <span className={`text-xs font-mono uppercase tracking-wider ${
-                      isActive ? 'text-primary' : isComplete ? 'text-[hsl(var(--low))]' : 'text-muted-foreground'
-                    }`}>
+                    <span className={`text-xs font-mono uppercase tracking-wider ${isActive ? 'text-primary' : isComplete ? 'text-[hsl(var(--low))]' : 'text-muted-foreground'
+                      }`}>
                       {step.label}
                     </span>
                   </div>
@@ -95,36 +78,36 @@ function ScanProgressStepper({ currentState, scanLogs }: { currentState: ScanSta
                     {step.description}
                   </p>
                 </div>
-                
+
                 {/* Connector line */}
                 {index < PROGRESS_STEPS.length - 1 && (
-                  <div className="hidden" /> 
+                  <div className="hidden" />
                 )}
               </div>
             )
           })}
         </div>
       </div>
-      
+
       {/* Live Terminal - show during scanning, deepening, and analyzing */}
       {(currentState === 'scanning' || currentState === 'deepening' || currentState === 'analyzing') && scanLogs.length > 0 && (
         <div className="border-t border-border">
           <div className="p-2 border-b border-border bg-muted/20 flex items-center gap-2">
-            <Zap className="w-3 h-3 text-primary" />
             <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
               Live Output
             </span>
           </div>
-          <div 
-            className="bg-[oklch(0.12_0.015_80)] p-3 font-mono text-[11px] text-[oklch(0.80_0.015_80)] h-32 overflow-y-auto"
+          <div
+            ref={terminalRef}
+            className="bg-black p-3 font-mono text-[11px] text-white h-32 overflow-y-auto"
           >
             {scanLogs.slice(-20).map((line, i) => (
-              <div 
-                key={i} 
+              <div
+                key={i}
                 className="whitespace-pre-wrap break-all animate-log-line"
                 style={{ animationDelay: `${i * 20}ms` }}
               >
-                <span className="text-primary/60 mr-2">{'>'}</span>{line}
+                <span className="text-green-400 mr-2">{'>'}</span>{line}
               </div>
             ))}
           </div>
@@ -136,7 +119,7 @@ function ScanProgressStepper({ currentState, scanLogs }: { currentState: ScanSta
 
 export default function ScanTarget() {
   const navigate = useNavigate()
-  
+
   // Use global scan store for persistent state
   const {
     scanState,
@@ -154,7 +137,7 @@ export default function ScanTarget() {
     setPhaseCleanup,
     reset,
   } = useScanStore()
-  
+
   const [validationResult, setValidationResult] = useState<{ allowed: boolean; message: string } | null>(null)
   const [isInputCollapsed, setIsInputCollapsed] = useState(scanState === 'scanning' || scanState === 'deepening' || scanState === 'analyzing')
 
@@ -223,31 +206,31 @@ export default function ScanTarget() {
         // Run progressive scan (Phase 1 + Phase 2 internally)
         console.log(`[ScanTarget] Starting progressive scan for: ${target}`)
         const result = await window.electronAPI.scanner.runNmap({ target })
-        
+
         // Clean up listeners
         removeListener()
         removePhaseListener()
         setProgressCleanup(null)
         setPhaseCleanup(null)
-        
+
         console.log(`[ScanTarget] Scan result:`, result)
-        
+
         if (result.success && result.data) {
           const scanData = result.data
-          
+
           // Analyze with LLM if we have vulnerabilities
           if (scanData.vulnerabilities.length > 0) {
             console.log(`[ScanTarget] Starting LLM analysis for ${scanData.vulnerabilities.length} vulnerabilities`)
             setScanState('analyzing')
             appendLog('\n[LLM] Starting AI analysis...\n')
-            
+
             try {
               const llmResult = await window.electronAPI.llm.analyzeVulnerabilities({
                 vulnerabilities: scanData.vulnerabilities,
                 target: scanData.target,
                 scanTimestamp: scanData.timestamp,
               })
-              
+
               if (llmResult.success) {
                 scanData.llmAnalysis = llmResult
                 console.log(`[ScanTarget] LLM analysis complete: ${llmResult.analyses.length} analyses`)
@@ -263,7 +246,7 @@ export default function ScanTarget() {
           } else {
             console.log('[ScanTarget] No vulnerabilities found, skipping LLM analysis')
           }
-          
+
           setScanResult(scanData)
           setScanState('complete')
           console.log('[ScanTarget] Scan pipeline complete')
@@ -310,7 +293,7 @@ export default function ScanTarget() {
 
   const stopScan = async () => {
     if (!window.electronAPI) return
-    
+
     try {
       const result = await window.electronAPI.scanner.abort()
       if (result.success) {
@@ -326,294 +309,281 @@ export default function ScanTarget() {
 
   return (
     <div className="p-6">
-    <div className="max-w-3xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="border border-border p-6 bg-card">
-        <h2 className="text-2xl mb-2">Target Scanner</h2>
-        <p className="text-muted-foreground text-sm font-mono">
-          Enter a target URL or IP address to initiate vulnerability scanning.
-          Only allowlisted targets can be scanned.
-        </p>
-      </div>
-
-      {/* Input Section - Collapsible */}
-      <div className="border border-border bg-card overflow-hidden transition-all duration-300">
-        {/* Collapse Header */}
-        <button
-          onClick={() => setIsInputCollapsed(!isInputCollapsed)}
-          className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
-        >
-          <div className="text-left flex-1">
-            <span className="text-sm font-mono uppercase tracking-wider text-muted-foreground">
-              Target URL / IP
-            </span>
-            {isInputCollapsed && target && (
-              <div className="flex items-center gap-2 mt-0.5">
-                <p className="text-sm font-mono text-foreground">
-                  {target} <span className="text-muted-foreground">• Progressive Scan</span>
-                </p>
-                {validationResult && (
-                  <span className={`inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded ${
-                    validationResult.allowed
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Input Section - Collapsible with Header */}
+        <div className="border border-border bg-card overflow-hidden transition-all duration-300">
+          {/* Collapse Header */}
+          <button
+            onClick={() => setIsInputCollapsed(!isInputCollapsed)}
+            className="w-full p-3 flex items-center justify-between hover:bg-muted/30 transition-colors"
+          >
+            <div className="text-left flex-1">
+              <h2 className="text-xl mb-1">Target Scanner</h2>
+              <p className="text-muted-foreground text-xs font-mono">
+                Enter a target URL or IP address to initiate vulnerability scanning.
+              </p>
+              {isInputCollapsed && target && (
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-sm font-mono text-foreground">
+                    {target} <span className="text-muted-foreground">• Progressive Scan</span>
+                  </p>
+                  {validationResult && (
+                    <span className={`inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded ${validationResult.allowed
                       ? 'bg-[hsl(var(--low))]/20 text-[hsl(var(--low))]'
                       : 'bg-[hsl(var(--critical))]/20 text-[hsl(var(--critical))]'
-                  }`}>
+                      }`}>
+                      {validationResult.allowed ? (
+                        <Check className="w-3 h-3" />
+                      ) : (
+                        <AlertTriangle className="w-3 h-3" />
+                      )}
+                      {validationResult.allowed ? 'Allowed' : 'Blocked'}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            {isInputCollapsed ? (
+              <ChevronDown className="w-5 h-5 text-muted-foreground" />
+            ) : (
+              <ChevronUp className="w-5 h-5 text-muted-foreground" />
+            )}
+          </button>
+
+          {/* Collapsible Content */}
+          <div className={`transition-all duration-300 ease-in-out ${isInputCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'
+            }`}>
+            <div className="p-4 pt-2 space-y-4 border-t border-border">
+              <label className="block">
+                <div className="flex gap-0">
+                  <input
+                    type="text"
+                    value={target}
+                    onChange={(e) => setTarget(e.target.value)}
+                    placeholder="testphp.vulnweb.com"
+                    disabled={scanState === 'scanning'}
+                    className="flex-1 px-4 py-3 bg-input border border-border text-foreground font-mono 
+                             placeholder:text-muted-foreground focus:outline-none focus:border-primary
+                             disabled:opacity-50"
+                  />
+                  <button
+                    onClick={validateTarget}
+                    disabled={scanState === 'scanning' || scanState === 'validating'}
+                    className="px-6 py-3 bg-primary text-primary-foreground font-mono uppercase tracking-wider
+                             border border-primary hover:bg-primary/90 disabled:opacity-50
+                             transition-transform"
+                  >
+                    {scanState === 'validating' ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      'Validate'
+                    )}
+                  </button>
+                </div>
+              </label>
+
+              {/* Allowlist hint & validation result */}
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground font-mono">
+                  Allowed targets (testing): testphp.vulnweb.com, localhost, 127.0.0.1
+                </p>
+                {validationResult && (
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-mono px-2 py-1 ${validationResult.allowed
+                    ? 'bg-[hsl(var(--low))]/20 text-[hsl(var(--low))] border border-[hsl(var(--low))]/30'
+                    : 'bg-[hsl(var(--critical))]/20 text-[hsl(var(--critical))] border border-[hsl(var(--critical))]/30'
+                    }`}>
                     {validationResult.allowed ? (
                       <Check className="w-3 h-3" />
                     ) : (
                       <AlertTriangle className="w-3 h-3" />
                     )}
-                    {validationResult.allowed ? 'Allowed' : 'Blocked'}
+                    {validationResult.allowed ? 'Target allowed' : 'Target blocked'}
                   </span>
                 )}
               </div>
-            )}
-          </div>
-          {isInputCollapsed ? (
-            <ChevronDown className="w-5 h-5 text-muted-foreground" />
-          ) : (
-            <ChevronUp className="w-5 h-5 text-muted-foreground" />
-          )}
-        </button>
-        
-        {/* Collapsible Content */}
-        <div className={`transition-all duration-300 ease-in-out ${
-          isInputCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100'
-        }`}>
-          <div className="p-6 pt-2 space-y-4 border-t border-border">
-            <label className="block">
-              <div className="flex gap-0">
-                <input
-                  type="text"
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  placeholder="testphp.vulnweb.com"
-                  disabled={scanState === 'scanning'}
-                  className="flex-1 px-4 py-3 bg-input border border-border text-foreground font-mono 
-                             placeholder:text-muted-foreground focus:outline-none focus:border-primary
-                             disabled:opacity-50"
-                />
-                <button
-                  onClick={validateTarget}
-                  disabled={scanState === 'scanning' || scanState === 'validating'}
-                  className="px-6 py-3 bg-primary text-primary-foreground font-mono uppercase tracking-wider
-                             border border-primary hover:bg-primary/90 disabled:opacity-50
-                             transition-transform"
-                >
-                  {scanState === 'validating' ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    'Validate'
-                  )}
-                </button>
-              </div>
-            </label>
-
-            {/* Allowlist hint & validation result */}
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground font-mono">
-                Allowed targets: testphp.vulnweb.com, localhost, 127.0.0.1
-              </p>
-              {validationResult && (
-                <span className={`inline-flex items-center gap-1.5 text-xs font-mono px-2 py-1 ${
-                  validationResult.allowed
-                    ? 'bg-[hsl(var(--low))]/20 text-[hsl(var(--low))] border border-[hsl(var(--low))]/30'
-                    : 'bg-[hsl(var(--critical))]/20 text-[hsl(var(--critical))] border border-[hsl(var(--critical))]/30'
-                }`}>
-                  {validationResult.allowed ? (
-                    <Check className="w-3 h-3" />
-                  ) : (
-                    <AlertTriangle className="w-3 h-3" />
-                  )}
-                  {validationResult.allowed ? 'Target allowed' : 'Target blocked'}
-                </span>
-              )}
             </div>
           </div>
         </div>
-      </div>
 
 
 
-      {/* Confirmation Dialog */}
-      {scanState === 'confirming' && (
-        <div className="border border-primary p-6 bg-card space-y-4 animate-stagger-in">
-          <div className="flex items-start gap-3">
-            <Crosshair className="w-6 h-6 text-primary mt-0.5" />
-            <div>
-              <h3 className="text-lg mb-1">Confirm Scan</h3>
-              <p className="text-muted-foreground text-sm font-mono">
-                You are about to scan <span className="text-primary">{target}</span>.
-                This will run a progressive scan: quick discovery first, then deep vulnerability testing.
-              </p>
+        {/* Confirmation Dialog */}
+        {scanState === 'confirming' && (
+          <div className="border border-primary p-6 bg-card space-y-4 animate-stagger-in">
+            <div className="flex items-start gap-3">
+              <div>
+                <h3 className="text-lg mb-1">Confirm Scan</h3>
+                <p className="text-muted-foreground text-sm font-mono">
+                  You are about to scan <span className="text-primary">{target}</span>.
+                  This will run a progressive scan: quick discovery first, then deep vulnerability testing.
+                </p>
+              </div>
             </div>
-          </div>
-          
-          <div className="flex gap-4 pt-2">
-            <button
-              onClick={startScan}
-              className="px-6 py-3 bg-primary text-primary-foreground font-mono uppercase tracking-wider
+
+            <div className="flex gap-4 pt-2">
+              <button
+                onClick={startScan}
+                className="px-6 py-3 bg-primary text-primary-foreground font-mono uppercase tracking-wider
                          border border-primary hover:bg-primary/90
                          transition-transform"
-            >
-              Start Scan
-            </button>
-            <button
-              onClick={handleReset}
-              className="px-6 py-3 bg-card text-foreground font-mono uppercase tracking-wider
+              >
+                Start Scan
+              </button>
+              <button
+                onClick={handleReset}
+                className="px-6 py-3 bg-card text-foreground font-mono uppercase tracking-wider
                          border border-border hover:bg-muted
                          transition-transform"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Scan Progress Stepper - shows during scanning and analyzing */}
-      <ScanProgressStepper currentState={scanState} scanLogs={scanLogs} />
-
-      {/* Scanning Header - Phase 1 */}
-      {scanState === 'scanning' && (
-        <div className="border border-border bg-card p-4 flex items-center gap-3 animate-stagger-in" style={{ animationDelay: '150ms' }}>
-          <Loader2 className="w-5 h-5 text-primary animate-spin" />
-          <div className="flex-1">
-            <p className="font-mono text-sm font-bold">Phase 1: Quick Discovery</p>
-            <p className="text-xs text-muted-foreground font-mono mt-1">
-              Scanning {target} • Top 100 ports • ~2-4 min
-            </p>
-          </div>
-          <button
-            onClick={stopScan}
-            className="px-4 py-2 bg-[hsl(var(--critical))]/10 text-[hsl(var(--critical))] font-mono text-xs uppercase tracking-wider
-                       border border-[hsl(var(--critical))] hover:bg-[hsl(var(--critical))]/20 transition-colors
-                       flex items-center gap-2"
-          >
-            <Square className="w-3 h-3 fill-current" /> Stop
-          </button>
-        </div>
-      )}
-
-      {/* Phase 2 Header - Deep Scan (with Phase 1 results summary) */}
-      {scanState === 'deepening' && scanResult && (
-        <div className="space-y-3 animate-stagger-in" style={{ animationDelay: '150ms' }}>
-          {/* Phase 1 Results Summary */}
-          <div className="border border-[hsl(var(--low))]/50 bg-[hsl(var(--low))]/5 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Check className="w-4 h-4 text-[hsl(var(--low))]" />
-              <span className="text-xs font-mono uppercase tracking-wider text-[hsl(var(--low))]">Phase 1 Results</span>
-            </div>
-            <div className="grid grid-cols-4 gap-3">
-              <div className="text-center">
-                <div className="text-lg font-bold font-mono">{scanResult.securityScore?.overall ?? '—'}</div>
-                <div className="text-[10px] text-muted-foreground font-mono">SCORE</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold font-mono">{scanResult.ports.length}</div>
-                <div className="text-[10px] text-muted-foreground font-mono">PORTS</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold font-mono">{scanResult.vulnerabilities.length}</div>
-                <div className="text-[10px] text-muted-foreground font-mono">VULNS</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold font-mono">{scanResult.securityScore?.grade ?? '—'}</div>
-                <div className="text-[10px] text-muted-foreground font-mono">GRADE</div>
-              </div>
+              >
+                Cancel
+              </button>
             </div>
           </div>
-          {/* Phase 2 Progress */}
-          <div className="border border-border bg-card p-4 flex items-center gap-3">
+        )}
+
+        {/* Scan Progress Stepper - shows during scanning and analyzing */}
+        <ScanProgressStepper currentState={scanState} scanLogs={scanLogs} />
+
+        {/* Scanning Header - Phase 1 */}
+        {scanState === 'scanning' && (
+          <div className="border border-border bg-card p-4 flex items-center gap-3 animate-stagger-in" style={{ animationDelay: '150ms' }}>
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
             <div className="flex-1">
-              <p className="font-mono text-sm font-bold">Phase 2: Deep Vulnerability Scan</p>
+              <p className="font-mono text-sm font-bold">Phase 1: Quick Discovery</p>
               <p className="text-xs text-muted-foreground font-mono mt-1">
-                All 65535 ports • SQLi • XSS • CSRF • Enumeration • ~10-25 min
+                Scanning {target} • Top 100 ports • ~2-4 min
               </p>
             </div>
             <button
               onClick={stopScan}
               className="px-4 py-2 bg-[hsl(var(--critical))]/10 text-[hsl(var(--critical))] font-mono text-xs uppercase tracking-wider
-                         border border-[hsl(var(--critical))] hover:bg-[hsl(var(--critical))]/20 transition-colors
-                         flex items-center gap-2"
+                       border border-[hsl(var(--critical))] hover:bg-[hsl(var(--critical))]/20 transition-colors
+                       flex items-center gap-2"
             >
               <Square className="w-3 h-3 fill-current" /> Stop
             </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* AI Analysis Header */}
-      {scanState === 'analyzing' && (
-        <div className="border border-primary bg-card p-4 flex items-center gap-3 animate-stagger-in" style={{ animationDelay: '150ms' }}>
-          <Brain className="w-5 h-5 text-primary animate-pulse" />
-          <div className="flex-1">
-            <p className="font-mono text-sm font-bold">Analyzing with AI</p>
-            <p className="text-xs text-muted-foreground font-mono mt-1">
-              Processing vulnerabilities through Gemini...
-            </p>
-          </div>
-          <button
-            onClick={stopScan}
-            className="px-4 py-2 bg-[hsl(var(--critical))]/10 text-[hsl(var(--critical))] font-mono text-xs uppercase tracking-wider
-                       border border-[hsl(var(--critical))] hover:bg-[hsl(var(--critical))]/20 transition-colors
-                       flex items-center gap-2"
-          >
-            <Square className="w-3 h-3 fill-current" /> Stop
-          </button>
-        </div>
-      )}
-
-      {/* Error Display */}
-      {error && scanState === 'error' && (
-        <div className="border border-[hsl(var(--critical))] p-6 bg-[hsl(var(--critical))]/10 animate-stagger-in">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-[hsl(var(--critical))] mt-0.5" />
-            <div>
-              <p className="font-mono text-sm text-[hsl(var(--critical))]">{error}</p>
+        {/* Phase 2 Header - Deep Scan (with Phase 1 results summary) */}
+        {scanState === 'deepening' && scanResult && (
+          <div className="space-y-3 animate-stagger-in" style={{ animationDelay: '150ms' }}>
+            {/* Phase 1 Results Summary */}
+            <div className="border border-[hsl(var(--low))]/50 bg-[hsl(var(--low))]/5 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Check className="w-4 h-4 text-[hsl(var(--low))]" />
+                <span className="text-xs font-mono uppercase tracking-wider text-[hsl(var(--low))]">Phase 1 Results</span>
+              </div>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="text-center">
+                  <div className="text-lg font-bold font-mono">{scanResult.securityScore?.overall ?? '—'}</div>
+                  <div className="text-[10px] text-muted-foreground font-mono">SCORE</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold font-mono">{scanResult.ports.length}</div>
+                  <div className="text-[10px] text-muted-foreground font-mono">PORTS</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold font-mono">{scanResult.vulnerabilities.length}</div>
+                  <div className="text-[10px] text-muted-foreground font-mono">VULNS</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold font-mono">{scanResult.securityScore?.grade ?? '—'}</div>
+                  <div className="text-[10px] text-muted-foreground font-mono">GRADE</div>
+                </div>
+              </div>
+            </div>
+            {/* Phase 2 Progress */}
+            <div className="border border-border bg-card p-4 flex items-center gap-3">
+              <Loader2 className="w-5 h-5 text-primary animate-spin" />
+              <div className="flex-1">
+                <p className="font-mono text-sm font-bold">Phase 2: Deep Vulnerability Scan</p>
+                <p className="text-xs text-muted-foreground font-mono mt-1">
+                  All 65535 ports • SQLi • XSS • CSRF • Enumeration • ~10-25 min
+                </p>
+              </div>
               <button
-                onClick={handleReset}
-                className="mt-3 text-xs font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                onClick={stopScan}
+                className="px-4 py-2 bg-[hsl(var(--critical))]/10 text-[hsl(var(--critical))] font-mono text-xs uppercase tracking-wider
+                         border border-[hsl(var(--critical))] hover:bg-[hsl(var(--critical))]/20 transition-colors
+                         flex items-center gap-2"
               >
-                Try again
+                <Square className="w-3 h-3 fill-current" /> Stop
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Scan Complete */}
-      {scanState === 'complete' && scanResult && (
-        <div className="border border-[hsl(var(--low))] p-6 bg-[hsl(var(--low))]/10 space-y-4 animate-stagger-in">
-          <div className="flex items-start gap-3">
-            <Check className="w-6 h-6 text-[hsl(var(--low))] mt-0.5" />
+        {/* AI Analysis Header */}
+        {scanState === 'analyzing' && (
+          <div className="border border-primary bg-card p-4 flex items-center gap-3 animate-stagger-in" style={{ animationDelay: '150ms' }}>
             <div className="flex-1">
-              <h3 className="text-lg mb-1">Scan Complete</h3>
-              <p className="text-muted-foreground text-sm font-mono mb-3">
-                Found {scanResult.vulnerabilities.length} vulnerabilities across {scanResult.ports.length} open ports
+              <p className="font-mono text-sm font-bold">Analyzing with AI</p>
+              <p className="text-xs text-muted-foreground font-mono mt-1">
+                Processing vulnerabilities through Gemini...
               </p>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="px-6 py-3 bg-primary text-primary-foreground font-mono uppercase tracking-wider
-                             border border-primary hover:bg-primary/90 transition-transform flex items-center gap-2"
-                >
-                  View Results <ArrowRight className="w-4 h-4" />
-                </button>
+            </div>
+            <button
+              onClick={stopScan}
+              className="px-4 py-2 bg-[hsl(var(--critical))]/10 text-[hsl(var(--critical))] font-mono text-xs uppercase tracking-wider
+                       border border-[hsl(var(--critical))] hover:bg-[hsl(var(--critical))]/20 transition-colors
+                       flex items-center gap-2"
+            >
+              <Square className="w-3 h-3 fill-current" /> Stop
+            </button>
+          </div>
+        )}
+
+        {/* Error Display */}
+        {error && scanState === 'error' && (
+          <div className="border border-[hsl(var(--critical))] p-6 bg-[hsl(var(--critical))]/10 animate-stagger-in">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-[hsl(var(--critical))] mt-0.5" />
+              <div>
+                <p className="font-mono text-sm text-[hsl(var(--critical))]">{error}</p>
                 <button
                   onClick={handleReset}
-                  className="px-6 py-3 bg-card text-foreground font-mono uppercase tracking-wider
-                             border border-border hover:bg-muted transition-transform"
+                  className="mt-3 text-xs font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
                 >
-                  New Scan
+                  Try again
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {/* Scan Complete */}
+        {scanState === 'complete' && scanResult && (
+          <div className="border border-[hsl(var(--low))] p-6 bg-[hsl(var(--low))]/10 space-y-4 animate-stagger-in">
+            <div className="flex items-start gap-3">
+              <Check className="w-6 h-6 text-[hsl(var(--low))] mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-lg mb-1">Scan Complete</h3>
+                <p className="text-muted-foreground text-sm font-mono mb-3">
+                  Found {scanResult.vulnerabilities.length} vulnerabilities across {scanResult.ports.length} open ports
+                </p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="px-6 py-3 bg-primary text-primary-foreground font-mono uppercase tracking-wider
+                             border border-primary hover:bg-primary/90 transition-transform flex items-center gap-2"
+                  >
+                    View Results <ArrowRight className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    className="px-6 py-3 bg-card text-foreground font-mono uppercase tracking-wider
+                             border border-border hover:bg-muted transition-transform"
+                  >
+                    New Scan
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

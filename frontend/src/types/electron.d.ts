@@ -147,6 +147,7 @@ export interface ElectronAPI {
     getHistory: () => Promise<NmapScanData[]>
     validateTarget: (target: string) => Promise<ValidationResult>
     abort: () => Promise<{ success: boolean; message: string }>
+    deleteScan: (timestamp: string) => Promise<{ success: boolean; message?: string }>
     onProgress: (callback: (line: string) => void) => () => void
     onPhaseResult: (callback: (data: NmapScanData) => void) => () => void
   }
@@ -172,4 +173,4 @@ declare global {
   }
 }
 
-export {}
+export { }
