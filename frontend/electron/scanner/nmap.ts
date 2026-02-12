@@ -411,22 +411,46 @@ export async function deleteScan(timestamp: string): Promise<{ success: boolean;
   await ensureScansDir()
 
   try {
-    // Find files with this timestamp
+    // Find files by reading JSON files and matching the timestamp field
+    // The filename timestamp is the scan start time, but the JSON contains the completion timestamp
     const files = await fs.readdir(SCANS_DIR)
-    const scanFiles = files.filter(f => f.includes(timestamp))
+    const jsonFiles = files.filter(f => f.endsWith('.json'))
 
-    if (scanFiles.length === 0) {
+    let matchedFile: string | null = null
+
+    // Search through JSON files to find one with matching timestamp
+    for (const jsonFile of jsonFiles) {
+      try {
+        const content = await fs.readFile(path.join(SCANS_DIR, jsonFile), 'utf-8')
+        const scanData = JSON.parse(content)
+        if (scanData.timestamp === timestamp) {
+          matchedFile = jsonFile
+          break
+        }
+      } catch {
+        // Skip invalid JSON files
+        continue
+      }
+    }
+
+    if (!matchedFile) {
+      console.warn(`[Scanner] No scan found with timestamp: ${timestamp}`)
       return { success: false, message: 'Scan not found' }
     }
 
-    // Delete all related files (JSON + XML)
-    for (const file of scanFiles) {
+    // Extract the filename base (without .json extension) to find related files
+    const baseName = matchedFile.replace('.json', '')
+    const relatedFiles = files.filter(f => f.startsWith(baseName))
+
+    // Delete all related files (JSON + XML + deep XML)
+    for (const file of relatedFiles) {
       const filePath = path.join(SCANS_DIR, file)
       await fs.unlink(filePath)
       console.log(`[Scanner] Deleted scan file: ${file}`)
     }
 
-    return { success: true, message: `Deleted ${scanFiles.length} scan file(s)` }
+    console.log(`[Scanner] Successfully deleted ${relatedFiles.length} file(s) for scan: ${timestamp}`)
+    return { success: true, message: `Deleted ${relatedFiles.length} scan file(s)` }
   } catch (err) {
     console.error('[Scanner] Failed to delete scan:', err)
     return {
@@ -435,4 +459,3 @@ export async function deleteScan(timestamp: string): Promise<{ success: boolean;
     }
   }
 }
-
