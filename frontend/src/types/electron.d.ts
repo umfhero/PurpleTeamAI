@@ -156,8 +156,11 @@ export interface ElectronAPI {
   }
   report: {
     export: (options: ReportOptions) => Promise<ReportResult>
+    exportPentest: (scan: NmapScanData) => Promise<ReportResult>
+    generatePentest: (scan: NmapScanData) => Promise<ReportResult>
     getHistory: () => Promise<ReportMetadata[]>
     open: (id: string) => Promise<boolean>
+    openFile: (filePath: string) => Promise<boolean>
     delete: (id: string, deleteFile: boolean) => Promise<boolean>
   }
   versions: {

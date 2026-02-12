@@ -209,6 +209,43 @@ ipcMain.handle('report:export', async (_event, options: ReportOptions) => {
   }
 })
 
+// Export pentest report
+ipcMain.handle('report:export-pentest', async (_event, scan: any) => {
+  console.log(`[IPC] Received pentest report export request for: ${scan.target}`)
+
+  try {
+    const { exportPentestReport } = await import('./reports')
+    const result = await exportPentestReport(scan)
+    console.log(`[IPC] Pentest report export ${result.success ? 'succeeded' : 'failed'}: ${result.filePath || result.error}`)
+    return result
+  } catch (error) {
+    console.error('[IPC] Pentest report export error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+})
+
+// Generate pentest report (auto-save to reports folder)
+ipcMain.handle('report:generate-pentest', async (_event, scan: any) => {
+  console.log(`[IPC] Received pentest report generation request for: ${scan.target}`)
+
+  try {
+    const { generatePentestReport } = await import('./reports')
+    const result = await generatePentestReport(scan)
+    console.log(`[IPC] Pentest report generation ${result.success ? 'succeeded' : 'failed'}: ${result.filePath || result.error}`)
+    return result
+  } catch (error) {
+    console.error('[IPC] Pentest report generation error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+})
+
+
 // Get report history
 ipcMain.handle('report:get-history', async () => {
   const { getReportHistory } = await import('./reports')
@@ -225,4 +262,12 @@ ipcMain.handle('report:open', async (_event, id: string) => {
 ipcMain.handle('report:delete', async (_event, id: string, deleteFile: boolean) => {
   const { deleteReport } = await import('./reports')
   return deleteReport(id, deleteFile)
+})
+
+// Open a report file by path
+ipcMain.handle('report:open-file', async (_event, filePath: string) => {
+  const { shell } = await import('electron')
+  const result = await shell.openPath(filePath)
+  // openPath returns empty string on success, or error message on failure
+  return result === ''
 })

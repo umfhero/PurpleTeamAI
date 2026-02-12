@@ -30,8 +30,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Report APIs
   report: {
     export: (options) => ipcRenderer.invoke('report:export', options),
+    exportPentest: (scan) => ipcRenderer.invoke('report:export-pentest', scan),
+    generatePentest: (scan) => ipcRenderer.invoke('report:generate-pentest', scan),
     getHistory: () => ipcRenderer.invoke('report:get-history'),
     open: (id) => ipcRenderer.invoke('report:open', id),
+    openFile: (filePath) => ipcRenderer.invoke('report:open-file', filePath),
     delete: (id, deleteFile) => ipcRenderer.invoke('report:delete', id, deleteFile),
   },
 
