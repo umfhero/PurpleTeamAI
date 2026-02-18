@@ -1,0 +1,5 @@
+Get a current state of the app. How does it work, visual (mermaid) if possible. 
+
+From what i invisin eg a moduler app with scripts that run, then pass over to AI to read, what is actually happening and where are the "scripts" stored and logic. In a way that i could explain any aspect of this project/folder and areas, quiz me etc
+
+what % is this project completed out of all the TODO/s and roughplan. Then compare what we found (with PDF report) with vunlist.md and what % of what we have is shown, and what we can do to reach that, as this will be our rubric. 
