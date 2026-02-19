@@ -207,7 +207,19 @@ export default function Dashboard() {
     const getSortedVulnerabilities = () => {
         if (!selectedScan) return []
 
+        // Filter out negative/empty results ("couldn't find any", "not vulnerable", etc.)
+        const negativeIndicators = [
+            "couldn't find", "could not find", "not found",
+            "no vulnerabilities", "not vulnerable", "not affected",
+            "doesn't seem to be vulnerable", "does not appear to be vulnerable",
+            "no issues found", "no matches found", "no results",
+        ]
         const filtered = selectedScan.vulnerabilities.filter(vuln => {
+            // Exclude negative/empty scan results
+            const outputLower = (vuln.output || vuln.description || '').toLowerCase()
+            const isNegative = negativeIndicators.some(phrase => outputLower.includes(phrase))
+            if (isNegative && outputLower.length < 200) return false
+
             if (!searchTerm) return true
             const term = searchTerm.toLowerCase()
             return (

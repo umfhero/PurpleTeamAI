@@ -357,6 +357,27 @@ export async function getScanHistory(): Promise<NmapScanData[]> {
         const content = await fs.readFile(path.join(SCANS_DIR, file), 'utf-8')
         const scanData = JSON.parse(content) as NmapScanData
 
+        // Clean up old scans: remove "negative" results that were saved before filtering was added
+        if (scanData.vulnerabilities) {
+          const negativeIndicators = [
+            "couldn't find", "could not find", "not found",
+            "no vulnerabilities", "not vulnerable", "not affected",
+            "doesn't seem to be vulnerable", "does not appear to be vulnerable",
+            "no issues found", "no matches found", "no results",
+          ]
+          const before = scanData.vulnerabilities.length
+          scanData.vulnerabilities = scanData.vulnerabilities.filter(v => {
+            const outputLower = (v.output || v.description || '').toLowerCase()
+            const isNegative = negativeIndicators.some(phrase => outputLower.includes(phrase))
+            return !(isNegative && outputLower.length < 200)
+          })
+          if (scanData.vulnerabilities.length !== before) {
+            console.log(`[Scanner] Cleaned ${before - scanData.vulnerabilities.length} negative results from old scan`)
+            // Re-save cleaned data
+            await fs.writeFile(path.join(SCANS_DIR, file), JSON.stringify(scanData, null, 2))
+          }
+        }
+
         // Calculate security score if missing (for old scans)
         if (!scanData.securityScore && scanData.vulnerabilities) {
           const hasLLMAnalysis = !!scanData.llmAnalysis
