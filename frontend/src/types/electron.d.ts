@@ -63,6 +63,43 @@ export interface LLMAnalysisResult {
   model?: string
   tokensUsed?: number
   processingTime?: number
+  hallucinationReport?: HallucinationReport
+}
+
+// Hallucination Guard types
+export type HallucinationRisk = 'low' | 'medium' | 'high'
+
+export interface CrossValidationResult {
+  vulnerabilityId: string
+  keywordCategories: OWASPCategory[]
+  aiCategory: OWASPCategory | null
+  agreement: boolean
+  conflicts: string[]
+}
+
+export interface CVEVerificationResult {
+  vulnerabilityId: string
+  aiMentionedCVEs: string[]
+  scanFoundCVEs: string[]
+  inventedCVEs: string[]
+  verified: boolean
+}
+
+export interface HallucinationFlag {
+  vulnerabilityId: string
+  risk: HallucinationRisk
+  reasons: string[]
+  crossValidation: CrossValidationResult
+  cveVerification: CVEVerificationResult
+}
+
+export interface HallucinationReport {
+  totalAnalysed: number
+  lowRisk: number
+  mediumRisk: number
+  highRisk: number
+  flags: HallucinationFlag[]
+  overallTrustScore: number
 }
 
 export interface LLMAnalysisRequest {

@@ -5,6 +5,7 @@ import { config } from 'dotenv'
 import { runNmapScan, getScanHistory, validateTarget, abortScan, deleteScan } from './scanner'
 import { GeminiClient } from './llm'
 import { exportReport } from './reports'
+import { generateHallucinationReport } from './analysis/hallucination-guard'
 import type { LLMAnalysisRequest } from './llm'
 import type { ReportOptions } from './reports'
 
@@ -175,6 +176,23 @@ ipcMain.handle('llm:analyze-vulnerabilities', async (_event, request: LLMAnalysi
 
     const client = new GeminiClient({ apiKey })
     const result = await client.analyzeVulnerabilities(request)
+
+    // Run hallucination guard: cross-validate AI output against scan data
+    if (result.success && result.analyses.length > 0) {
+      const vulns = request.vulnerabilities.map(v => ({
+        id: v.id,
+        cve: v.cve,
+        title: v.title,
+        description: v.description,
+        severity: v.severity as 'critical' | 'high' | 'medium' | 'low' | 'info',
+        port: v.port,
+        service: v.service,
+        output: v.output
+      }))
+      const hallucinationReport = generateHallucinationReport(vulns, result.analyses)
+      result.hallucinationReport = hallucinationReport
+      console.log(`[IPC] Hallucination guard: trust=${hallucinationReport.overallTrustScore}/100, high-risk=${hallucinationReport.highRisk}, medium-risk=${hallucinationReport.mediumRisk}, low-risk=${hallucinationReport.lowRisk}`)
+    }
 
     console.log(`[IPC] LLM analysis complete: ${result.success ? 'success' : 'failed'}`)
     return result

@@ -32,6 +32,7 @@ export interface LLMAnalysisResult {
   model?: string
   tokensUsed?: number
   processingTime?: number
+  hallucinationReport?: import('../analysis/hallucination-guard').HallucinationReport
 }
 
 export interface GeminiConfig {
