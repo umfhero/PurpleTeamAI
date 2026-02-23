@@ -28,7 +28,7 @@ Target → Validate → Phase 1 Scan → Parse XML → Phase 2 Scan → Parse XM
 | 7. Score               | Analysis | Vuln counts + OWASP coverage | 0-100 score with letter grade               |
 | 8. AI Analysis         | LLM      | Compressed vuln data         | Plain-English summaries + remediation steps |
 | 9. Hallucination Guard | Analysis | AI output + scan data        | Trust score + per-vuln risk flags           |
-| 10. Report             | Reports  | All above combined           | Exportable HTML report                      |
+| 10. Report             | Reports  | All above combined           | Exportable PDF report                       |
 
 ---
 
@@ -145,7 +145,7 @@ The app has multiple layers designed to detect and mitigate AI hallucinations (f
 
 ### 4. Reports Module — `electron/reports/`
 
-Generates professional HTML reports from the combined pipeline output.
+Generates professional PDF reports from the combined pipeline output.
 
 | File                   | Role                                                                               |
 | ---------------------- | ---------------------------------------------------------------------------------- |
@@ -216,7 +216,7 @@ All communication between frontend and backend goes through `contextBridge.expos
 | --------------------- | ------------------------------------------ | -------------------- |
 | Scan results (raw)    | `data/scans/scan-{timestamp}.xml`          | Nmap XML             |
 | Scan results (parsed) | `data/scans/scan-{timestamp}.json`         | Structured JSON      |
-| Generated reports     | `data/reports/report_{target}_{date}.html` | HTML                 |
+| Generated reports     | `data/reports/report_{target}_{date}.PDF` | PDF                 |
 | Report metadata       | `data/reports/metadata.json`               | JSON                 |
 | Target allowlist      | `allowed-targets.json`                     | JSON                 |
 | API key               | `.env`                                     | `GEMINI_API_KEY=...` |
