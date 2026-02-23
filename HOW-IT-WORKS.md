@@ -236,3 +236,82 @@ All communication between frontend and backend goes through `contextBridge.expos
 | XML parsing       | xml2js                               |
 | Routing           | React Router                         |
 | State             | Custom singleton store + React hooks |
+
+# Planned Implementation Extensions
+
+The following extensions are designed to strengthen lifecycle integration, validation robustness, and empirical evaluation capabilities within the PurpleTeam Suite.
+
+1. Iterative Scan Delta Comparison
+
+The system will support structured comparison between consecutive scans of the same target.
+
+After a new scan completes:
+
+The most recent previous scan for that target will be loaded.
+
+Vulnerabilities will be categorised as:
+
+Resolved
+
+Persisting
+
+Newly introduced
+
+Security score changes will be calculated (previous vs current).
+
+OWASP category coverage differences will be computed.
+
+A structured Change Summary will be generated and included in both the dashboard and exported reports.
+
+This introduces lifecycle iteration and measurable post-remediation reassessment.
+
+2. Controlled Evaluation Scenario (Localhost Testbed)
+
+A controlled local environment will be used to:
+
+Introduce known vulnerabilities.
+
+Perform initial assessment.
+
+Remediate selected vulnerabilities.
+
+Re-scan and measure:
+
+Score improvement
+
+Vulnerability reduction
+
+OWASP coverage contraction
+
+Delta comparison output
+
+This supports empirical evaluation of prioritisation, remediation guidance, and scoring behaviour.
+
+3. Empirical Hallucination Evaluation Layer
+
+The hallucination guard will be extended with structured metric logging:
+
+OWASP classification disagreement rate
+
+Fabricated CVE detection count
+
+Confidence mismatch frequency
+
+Trust score distribution across scans
+
+Metrics will be persisted for quantitative analysis in Chapter 4.
+This allows empirical assessment of probabilistic AI behaviour under deterministic validation constraints.
+
+4. Exploitability-Aware Risk Weighting
+
+The security scoring engine will incorporate contextual exploitability factors:
+
+Public-facing port exposure weighting
+
+Database/service exposure amplification
+
+TLS absence penalty
+
+Authentication weakness multipliers
+
+All adjustments will remain deterministic and transparent, strengthening prioritisation realism without introducing probabilistic instability.
