@@ -212,14 +212,14 @@ All communication between frontend and backend goes through `contextBridge.expos
 
 ## Data Storage
 
-| What                  | Where                                      | Format               |
-| --------------------- | ------------------------------------------ | -------------------- |
-| Scan results (raw)    | `data/scans/scan-{timestamp}.xml`          | Nmap XML             |
-| Scan results (parsed) | `data/scans/scan-{timestamp}.json`         | Structured JSON      |
-| Generated reports     | `data/reports/report_{target}_{date}.PDF` | PDF                 |
-| Report metadata       | `data/reports/metadata.json`               | JSON                 |
-| Target allowlist      | `allowed-targets.json`                     | JSON                 |
-| API key               | `.env`                                     | `GEMINI_API_KEY=...` |
+| What                  | Where                                     | Format               |
+| --------------------- | ----------------------------------------- | -------------------- |
+| Scan results (raw)    | `data/scans/scan-{timestamp}.xml`         | Nmap XML             |
+| Scan results (parsed) | `data/scans/scan-{timestamp}.json`        | Structured JSON      |
+| Generated reports     | `data/reports/report_{target}_{date}.PDF` | PDF                  |
+| Report metadata       | `data/reports/metadata.json`              | JSON                 |
+| Target allowlist      | `allowed-targets.json`                    | JSON                 |
+| API key               | `.env`                                    | `GEMINI_API_KEY=...` |
 
 ---
 

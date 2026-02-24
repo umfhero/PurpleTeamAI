@@ -54,7 +54,7 @@ export default function Layout() {
                 {/* Version info */}
                 {sidebarOpen && (
                     <div className="p-4 border-t border-border text-xs font-mono text-muted-foreground">
-                        v1.0.0-dev
+                        v2.1.0-dev
                     </div>
                 )}
             </aside>
