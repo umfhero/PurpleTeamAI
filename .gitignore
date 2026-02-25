@@ -16,6 +16,7 @@ frontend/release/
 
 # Scan data
 frontend/data/scans/
+data/
 
 # Electron
 *.asar

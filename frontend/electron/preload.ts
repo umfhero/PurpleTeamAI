@@ -53,7 +53,7 @@ declare global {
       scanner: {
         runNmap: (target: string) => Promise<{ success: boolean; message?: string; data?: unknown }>
         getHistory: () => Promise<unknown[]>
-        validateTarget: (target: string) => Promise<{ allowed: boolean; target: string }>
+        validateTarget: (target: string) => Promise<{ allowed: boolean; target: string; requiresDisclaimer: boolean }>
       }
       versions: {
         node: string

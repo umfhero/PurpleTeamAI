@@ -109,14 +109,9 @@ ipcMain.handle('scanner:run-nmap', async (event, options: { target: string }) =>
   const { target } = options
   console.log(`[IPC] Received scan request for: ${target}`)
 
-  // First validate the target
+  // Validate the target (always allowed, disclaimer handled by frontend)
   const validation = await validateTarget(target)
-  if (!validation.allowed) {
-    console.log(`[IPC] Target validation failed: ${target}`)
-    return { success: false, message: `Target "${target}" is not in the allowlist` }
-  }
-
-  console.log(`[IPC] Target validated, starting progressive scan...`)
+  console.log(`[IPC] Target validated (disclaimer required: ${validation.requiresDisclaimer}), starting progressive scan...`)
 
   // Run the scan with progress + phase callbacks
   const result = await runNmapScan(

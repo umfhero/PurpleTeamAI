@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { Crosshair, AlertTriangle, Check, Loader2, ArrowRight, Brain, Zap, Circle, ChevronDown, ChevronUp, Square } from 'lucide-react'
+import { Crosshair, AlertTriangle, Check, Loader2, ArrowRight, Brain, Zap, Circle, ChevronDown, ChevronUp, Square, ShieldAlert } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useScanStore } from '../lib/useScanStore'
 import type { ScanState } from '../lib/scanStore'
 
 // Progress step definitions
 const PROGRESS_STEPS = [
-  { id: 'validating', label: 'Validating', description: 'Checking allowlist' },
+  { id: 'validating', label: 'Validating', description: 'Checking target' },
   { id: 'confirming', label: 'Confirm', description: 'Awaiting user action' },
   { id: 'scanning', label: 'Phase 1', description: 'Quick discovery' },
   { id: 'deepening', label: 'Phase 2', description: 'Deep vulnerability scan' },
@@ -138,8 +138,28 @@ export default function ScanTarget() {
     reset,
   } = useScanStore()
 
-  const [validationResult, setValidationResult] = useState<{ allowed: boolean; message: string } | null>(null)
+  const [validationResult, setValidationResult] = useState<{ allowed: boolean; message: string; requiresDisclaimer: boolean } | null>(null)
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false)
   const [isInputCollapsed, setIsInputCollapsed] = useState(scanState === 'scanning' || scanState === 'deepening' || scanState === 'analyzing')
+
+  // Tab-autocomplete for known targets
+  const KNOWN_TARGETS = [
+    'testphp.vulnweb.com',
+    'localhost',
+    '127.0.0.1',
+    '::1',
+  ]
+
+  const tabSuggestion = target.length > 0
+    ? KNOWN_TARGETS.find(t => t.toLowerCase().startsWith(target.toLowerCase()) && t.toLowerCase() !== target.toLowerCase())
+    : null
+
+  const handleTabComplete = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Tab' && tabSuggestion) {
+      e.preventDefault()
+      setTarget(tabSuggestion)
+    }
+  }
 
   const validateTarget = async () => {
     if (!target.trim()) {
@@ -149,31 +169,29 @@ export default function ScanTarget() {
 
     setScanState('validating')
     setScanError(null)
+    setDisclaimerAccepted(false)
 
     try {
       // Check if we're in Electron environment
       if (window.electronAPI) {
         const result = await window.electronAPI.scanner.validateTarget(target)
-        if (result.allowed) {
-          setValidationResult({ allowed: true, message: `Target "${target}" is in the allowlist.` })
+        if (result.requiresDisclaimer) {
+          setValidationResult({ allowed: true, message: `Target "${target}" requires legal acknowledgement before scanning.`, requiresDisclaimer: true })
           setScanState('confirming')
         } else {
-          setValidationResult({ allowed: false, message: `Target "${target}" is NOT in the allowlist. Scanning blocked.` })
-          setScanState('error')
-          setScanError('Target not allowed. Only authorized targets can be scanned.')
+          setValidationResult({ allowed: true, message: `Target "${target}" is a known safe testing target.`, requiresDisclaimer: false })
+          setScanState('confirming')
         }
       } else {
         // Development fallback - simulate validation
-        const allowedPatterns = ['testphp.vulnweb.com', 'localhost', '127.0.0.1']
-        const isAllowed = allowedPatterns.some(pattern => target.includes(pattern))
-        if (isAllowed) {
-          setValidationResult({ allowed: true, message: `Target "${target}" is in the allowlist.` })
-          setScanState('confirming')
+        const knownSafePatterns = ['testphp.vulnweb.com', 'localhost', '127.0.0.1']
+        const isKnownSafe = knownSafePatterns.some(pattern => target.includes(pattern))
+        if (isKnownSafe) {
+          setValidationResult({ allowed: true, message: `Target "${target}" is a known safe testing target.`, requiresDisclaimer: false })
         } else {
-          setValidationResult({ allowed: false, message: `Target "${target}" is NOT allowed.` })
-          setScanState('error')
-          setScanError('Target not allowed. Only authorized targets can be scanned.')
+          setValidationResult({ allowed: true, message: `Target "${target}" requires legal acknowledgement before scanning.`, requiresDisclaimer: true })
         }
+        setScanState('confirming')
       }
     } catch (err) {
       setScanError('Validation failed: ' + (err instanceof Error ? err.message : 'Unknown error'))
@@ -288,6 +306,7 @@ export default function ScanTarget() {
   const handleReset = () => {
     reset()
     setValidationResult(null)
+    setDisclaimerAccepted(false)
     setIsInputCollapsed(false)
   }
 
@@ -328,16 +347,16 @@ export default function ScanTarget() {
                     {target} <span className="text-muted-foreground">• Progressive Scan</span>
                   </p>
                   {validationResult && (
-                    <span className={`inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded ${validationResult.allowed
-                      ? 'bg-[hsl(var(--low))]/20 text-[hsl(var(--low))]'
-                      : 'bg-[hsl(var(--critical))]/20 text-[hsl(var(--critical))]'
+                    <span className={`inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded ${validationResult.requiresDisclaimer
+                      ? 'bg-amber-500/20 text-amber-400'
+                      : 'bg-[hsl(var(--low))]/20 text-[hsl(var(--low))]'
                       }`}>
-                      {validationResult.allowed ? (
-                        <Check className="w-3 h-3" />
+                      {validationResult.requiresDisclaimer ? (
+                        <ShieldAlert className="w-3 h-3" />
                       ) : (
-                        <AlertTriangle className="w-3 h-3" />
+                        <Check className="w-3 h-3" />
                       )}
-                      {validationResult.allowed ? 'Allowed' : 'Blocked'}
+                      {validationResult.requiresDisclaimer ? 'Disclaimer accepted' : 'Known target'}
                     </span>
                   )}
                 </div>
@@ -356,16 +375,27 @@ export default function ScanTarget() {
             <div className="p-4 pt-2 space-y-4 border-t border-border">
               <label className="block">
                 <div className="flex gap-0">
-                  <input
-                    type="text"
-                    value={target}
-                    onChange={(e) => setTarget(e.target.value)}
-                    placeholder="testphp.vulnweb.com"
-                    disabled={scanState === 'scanning'}
-                    className="flex-1 px-4 py-3 bg-input border border-border text-foreground font-mono 
-                             placeholder:text-muted-foreground focus:outline-none focus:border-primary
-                             disabled:opacity-50"
-                  />
+                  <div className="flex-1 relative">
+                    {/* Ghost text for tab-completion */}
+                    {tabSuggestion && (
+                      <div className="absolute inset-0 px-4 py-3 font-mono pointer-events-none flex items-center">
+                        <span className="invisible">{target}</span>
+                        <span className="text-muted-foreground/40">{tabSuggestion.slice(target.length)}</span>
+                      </div>
+                    )}
+                    <input
+                      type="text"
+                      value={target}
+                      onChange={(e) => setTarget(e.target.value)}
+                      onKeyDown={handleTabComplete}
+                      placeholder="testphp.vulnweb.com"
+                      disabled={scanState === 'scanning'}
+                      autoComplete="off"
+                      className="w-full px-4 py-3 bg-input border border-border text-foreground font-mono 
+                               placeholder:text-muted-foreground focus:outline-none focus:border-primary
+                               disabled:opacity-50 relative z-10 bg-transparent"
+                    />
+                  </div>
                   <button
                     onClick={validateTarget}
                     disabled={scanState === 'scanning' || scanState === 'validating'}
@@ -382,22 +412,22 @@ export default function ScanTarget() {
                 </div>
               </label>
 
-              {/* Allowlist hint & validation result */}
+              {/* Target hint & validation result */}
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground font-mono">
-                  Allowed targets (testing): testphp.vulnweb.com, localhost, 127.0.0.1
+                  Enter any target URL or IP address to scan
                 </p>
                 {validationResult && (
-                  <span className={`inline-flex items-center gap-1.5 text-xs font-mono px-2 py-1 ${validationResult.allowed
-                    ? 'bg-[hsl(var(--low))]/20 text-[hsl(var(--low))] border border-[hsl(var(--low))]/30'
-                    : 'bg-[hsl(var(--critical))]/20 text-[hsl(var(--critical))] border border-[hsl(var(--critical))]/30'
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-mono px-2 py-1 ${validationResult.requiresDisclaimer
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    : 'bg-[hsl(var(--low))]/20 text-[hsl(var(--low))] border border-[hsl(var(--low))]/30'
                     }`}>
-                    {validationResult.allowed ? (
-                      <Check className="w-3 h-3" />
+                    {validationResult.requiresDisclaimer ? (
+                      <ShieldAlert className="w-3 h-3" />
                     ) : (
-                      <AlertTriangle className="w-3 h-3" />
+                      <Check className="w-3 h-3" />
                     )}
-                    {validationResult.allowed ? 'Target allowed' : 'Target blocked'}
+                    {validationResult.requiresDisclaimer ? 'Disclaimer required' : 'Known safe target'}
                   </span>
                 )}
               </div>
@@ -411,20 +441,60 @@ export default function ScanTarget() {
         {scanState === 'confirming' && (
           <div className="border border-primary p-6 bg-card space-y-4 animate-stagger-in">
             <div className="flex items-start gap-3">
-              <div>
-                <h3 className="text-lg mb-1">Confirm Scan</h3>
-                <p className="text-muted-foreground text-sm font-mono">
-                  You are about to scan <span className="text-primary">{target}</span>.
-                  This will run a progressive scan: quick discovery first, then deep vulnerability testing.
-                </p>
+              <div className="space-y-4 w-full">
+                <div>
+                  <h3 className="text-lg mb-1">Confirm Scan</h3>
+                  <p className="text-muted-foreground text-sm font-mono">
+                    You are about to scan <span className="text-primary">{target}</span>.
+                    This will run a progressive scan: quick discovery first, then deep vulnerability testing.
+                  </p>
+                </div>
+
+                {/* UK Computer Misuse Act Disclaimer — shown for non-whitelisted targets */}
+                {validationResult?.requiresDisclaimer && (
+                  <div className="border border-amber-500/50 bg-amber-500/5 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <ShieldAlert className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                      <h4 className="text-sm font-mono uppercase tracking-wider text-amber-400">Legal Disclaimer</h4>
+                    </div>
+                    <div className="text-xs font-mono text-muted-foreground space-y-2 pl-7">
+                      <p>
+                        Under the <span className="text-foreground">Computer Misuse Act 1990 (UK)</span>, it is an offence
+                        to perform unauthorised access to, or unauthorised modification of, computer material.
+                        Scanning a system without explicit permission from the owner is illegal.
+                      </p>
+                      <p>
+                        By proceeding, you confirm that:
+                      </p>
+                      <ul className="list-disc pl-4 space-y-1">
+                        <li>You have <span className="text-foreground">explicit written authorisation</span> from the owner of the target system to perform this scan.</li>
+                        <li>You understand that <span className="text-foreground">unauthorised scanning may constitute a criminal offence</span>.</li>
+                        <li>You accept full responsibility for any consequences resulting from this scan.</li>
+                        <li>This tool is intended for <span className="text-foreground">authorised security testing only</span>.</li>
+                      </ul>
+                    </div>
+                    <label className="flex items-center gap-3 pl-7 pt-1 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={disclaimerAccepted}
+                        onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+                        className="w-4 h-4 accent-amber-500"
+                      />
+                      <span className="text-xs font-mono text-foreground">
+                        I confirm I have authorisation to scan this target
+                      </span>
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="flex gap-4 pt-2">
               <button
                 onClick={startScan}
+                disabled={validationResult?.requiresDisclaimer && !disclaimerAccepted}
                 className="px-6 py-3 bg-primary text-primary-foreground font-mono uppercase tracking-wider
-                         border border-primary hover:bg-primary/90
+                         border border-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed
                          transition-transform"
               >
                 Start Scan

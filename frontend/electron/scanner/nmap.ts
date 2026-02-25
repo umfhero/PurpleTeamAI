@@ -402,26 +402,27 @@ export async function getScanHistory(): Promise<NmapScanData[]> {
 }
 
 /**
- * Validate target against allowlist
+ * Validate target — all targets are allowed, but non-whitelisted ones require a disclaimer.
  */
-export async function validateTarget(target: string): Promise<{ allowed: boolean; target: string }> {
-  // Load allowlist
+export async function validateTarget(target: string): Promise<{ allowed: boolean; target: string; requiresDisclaimer: boolean }> {
+  // Load known safe targets list
   const allowlistPath = path.join(process.cwd(), 'allowed-targets.json')
+
+  const knownSafePatterns = ['testphp.vulnweb.com', 'localhost', '127.0.0.1', '::1']
 
   try {
     const content = await fs.readFile(allowlistPath, 'utf-8')
     const allowlist = JSON.parse(content)
 
     const patterns: string[] = allowlist.targets.map((t: { pattern: string }) => t.pattern)
-    const isAllowed = patterns.some((pattern) => target.toLowerCase().includes(pattern.toLowerCase()))
+    const isKnownSafe = patterns.some((pattern) => target.toLowerCase().includes(pattern.toLowerCase()))
 
-    return { allowed: isAllowed, target }
+    return { allowed: true, target, requiresDisclaimer: !isKnownSafe }
   } catch (err) {
-    console.error('[Scanner] Failed to load allowlist:', err)
+    console.error('[Scanner] Failed to load known targets list:', err)
     // Fallback to hardcoded list if file not found
-    const fallbackPatterns = ['testphp.vulnweb.com', 'localhost', '127.0.0.1', '::1']
-    const isAllowed = fallbackPatterns.some((pattern) => target.toLowerCase().includes(pattern.toLowerCase()))
-    return { allowed: isAllowed, target }
+    const isKnownSafe = knownSafePatterns.some((pattern) => target.toLowerCase().includes(pattern.toLowerCase()))
+    return { allowed: true, target, requiresDisclaimer: !isKnownSafe }
   }
 }
 

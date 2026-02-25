@@ -43,6 +43,7 @@ export interface VulnerabilityResult {
 export interface ValidationResult {
   allowed: boolean
   target: string
+  requiresDisclaimer: boolean
   message?: string
 }
 
