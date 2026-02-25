@@ -284,3 +284,15 @@ ipcMain.handle('report:open-file', async (_event, filePath: string) => {
   // openPath returns empty string on success, or error message on failure
   return result === ''
 })
+
+// Read a PDF file as base64 for in-app preview
+ipcMain.handle('report:read-pdf', async (_event, filePath: string) => {
+  try {
+    const fsModule = await import('node:fs/promises')
+    const data = await fsModule.readFile(filePath)
+    return { success: true, data: data.toString('base64') }
+  } catch (error) {
+    console.error('[IPC] Failed to read PDF:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+})

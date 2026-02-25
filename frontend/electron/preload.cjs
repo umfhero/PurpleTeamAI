@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getHistory: () => ipcRenderer.invoke('report:get-history'),
     open: (id) => ipcRenderer.invoke('report:open', id),
     openFile: (filePath) => ipcRenderer.invoke('report:open-file', filePath),
+    readPdf: (filePath) => ipcRenderer.invoke('report:read-pdf', filePath),
     delete: (id, deleteFile) => ipcRenderer.invoke('report:delete', id, deleteFile),
   },
 

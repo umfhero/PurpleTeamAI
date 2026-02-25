@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { FileText, Download, Loader2, AlertTriangle, FileSearch, Calendar, Trash2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { FileText, Download, Loader2, AlertTriangle, Calendar, Trash2 } from 'lucide-react'
 import type { NmapScanData } from '../types/electron.d'
 
 // Get grade color based on security grade
@@ -11,25 +11,16 @@ function getGradeColor(grade?: string): string {
   return 'text-[oklch(0.55_0.22_25)]'
 }
 
-interface PentestReport {
-  id: string
-  target: string
-  scanTimestamp: string
-  filePath: string
-  vulnerabilityCount: number
-  securityScore?: number
-  grade?: string
-  preview?: string
-}
-
 export default function Reports() {
   const [scanHistory, setScanHistory] = useState<NmapScanData[]>([])
   const [selectedScan, setSelectedScan] = useState<NmapScanData | null>(null)
-  const [reportContent, setReportContent] = useState<string | null>(null)
+  const [reportFilePath, setReportFilePath] = useState<string | null>(null)
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; scan: NmapScanData } | null>(null)
+  const prevBlobUrl = useRef<string | null>(null)
 
   useEffect(() => {
     loadScanHistory()
@@ -68,11 +59,12 @@ export default function Reports() {
 
   const selectScan = async (scan: NmapScanData) => {
     setSelectedScan(scan)
-    setReportContent(null)
-    await generateReportPreview(scan)
+    setReportFilePath(null)
+    setPdfBlobUrl(null)
+    await generateAndLoadReport(scan)
   }
 
-  const generateReportPreview = async (scan: NmapScanData) => {
+  const generateAndLoadReport = async (scan: NmapScanData) => {
     setGenerating(true)
     try {
       if (!window.electronAPI?.report) {
@@ -82,49 +74,55 @@ export default function Reports() {
 
       console.log('Generating pentest report for:', scan.target)
 
-      // Generate the pentest report and get the file path
+      // Generate the pentest report PDF
       const result = await window.electronAPI.report.generatePentest(scan)
 
       console.log('Generate pentest result:', result)
 
       if (result.success && result.filePath) {
         console.log('Report generated successfully at:', result.filePath)
-        setReportContent(result.filePath)
+        setReportFilePath(result.filePath)
+
+        // Read the PDF and create a blob URL for in-app preview
+        const pdfResult = await window.electronAPI.report.readPdf(result.filePath)
+        if (pdfResult.success && pdfResult.data) {
+          // Revoke previous blob URL to avoid memory leaks
+          if (prevBlobUrl.current) {
+            URL.revokeObjectURL(prevBlobUrl.current)
+          }
+
+          const byteCharacters = atob(pdfResult.data)
+          const byteNumbers = new Array(byteCharacters.length)
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i)
+          }
+          const byteArray = new Uint8Array(byteNumbers)
+          const blob = new Blob([byteArray], { type: 'application/pdf' })
+          const url = URL.createObjectURL(blob)
+          setPdfBlobUrl(url)
+          prevBlobUrl.current = url
+        }
       } else {
         console.error('Report generation failed:', result.error)
       }
     } catch (error) {
-      console.error('Failed to generate report preview:', error)
+      console.error('Failed to generate report:', error)
     } finally {
       setGenerating(false)
     }
   }
 
-  const handleViewFullReport = async () => {
-    if (!selectedScan || !reportContent || !window.electronAPI?.report) return
-
-    try {
-      // Call a new IPC method to open the report
-      const result = await window.electronAPI.report.openFile(reportContent)
-      if (!result) {
-        console.error('Failed to open report file')
-      }
-    } catch (error) {
-      console.error('Failed to open report:', error)
-    }
-  }
-
-  const handleExportReport = async () => {
+  const handleDownloadReport = async () => {
     if (!selectedScan || !window.electronAPI?.report) return
 
     setExporting(true)
     try {
       const result = await window.electronAPI.report.exportPentest(selectedScan)
       if (result.success) {
-        console.log('Report exported:', result.filePath)
+        console.log('Report downloaded to:', result.filePath)
       }
     } catch (error) {
-      console.error('Export failed:', error)
+      console.error('Download failed:', error)
     } finally {
       setExporting(false)
     }
@@ -148,7 +146,12 @@ export default function Reports() {
           await selectScan(updatedScans[0])
         } else {
           setSelectedScan(null)
-          setReportContent(null)
+          setReportFilePath(null)
+          if (prevBlobUrl.current) {
+            URL.revokeObjectURL(prevBlobUrl.current)
+            prevBlobUrl.current = null
+          }
+          setPdfBlobUrl(null)
         }
       }
 
@@ -240,7 +243,7 @@ export default function Reports() {
         )}
       </aside>
 
-      {/* Main Content - Report Display */}
+      {/* Main Content - PDF Report Viewer */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {selectedScan ? (
           <>
@@ -250,192 +253,58 @@ export default function Reports() {
                 <FileText className="w-5 h-5 text-primary" />
                 <div>
                   <h2 className="font-mono font-semibold">
-                    Penetration Test Report: {selectedScan.target}
+                    {selectedScan.target}
                   </h2>
                   <p className="text-xs text-muted-foreground font-mono">
                     {new Date(selectedScan.timestamp).toLocaleString()}
+                    {selectedScan.securityScore && (
+                      <span className={`ml-3 font-bold ${getGradeColor(selectedScan.securityScore.grade)}`}>
+                        Grade {selectedScan.securityScore.grade}
+                      </span>
+                    )}
+                    <span className="ml-3">
+                      {selectedScan.vulnerabilities.length} finding{selectedScan.vulnerabilities.length !== 1 ? 's' : ''}
+                    </span>
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {reportContent && (
-                  <button
-                    onClick={handleViewFullReport}
-                    className="flex items-center gap-2 px-4 py-2 border border-border hover:border-primary 
-                             hover:text-primary transition-colors font-mono text-xs uppercase tracking-wider"
-                  >
-                    <FileSearch className="w-4 h-4" />
-                    View Full Report
-                  </button>
+              <button
+                onClick={handleDownloadReport}
+                disabled={exporting || generating}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground
+                         font-mono text-xs uppercase tracking-wider hover:bg-primary/90 transition-colors
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {exporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
                 )}
-                <button
-                  onClick={handleExportReport}
-                  disabled={exporting}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground
-                           font-mono text-xs uppercase tracking-wider hover:bg-primary/90 transition-colors
-                           disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {exporting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4" />
-                  )}
-                  Export Report
-                </button>
-              </div>
+                Download Report
+              </button>
             </div>
 
-            {/* Report Preview/Summary */}
-            <div className="flex-1 overflow-auto p-6">
+            {/* PDF Viewer */}
+            <div className="flex-1 overflow-hidden bg-neutral-900">
               {generating ? (
                 <div className="flex flex-col items-center justify-center h-full">
                   <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
                   <p className="text-sm text-muted-foreground font-mono">
-                    Generating professional pentest report...
+                    Generating report...
                   </p>
                 </div>
+              ) : pdfBlobUrl ? (
+                <iframe
+                  src={pdfBlobUrl}
+                  className="w-full h-full border-0"
+                  title={`Penetration Test Report — ${selectedScan.target}`}
+                />
               ) : (
-                <div className="max-w-4xl mx-auto space-y-6">
-                  {/* Report Summary */}
-                  <div className="border border-border bg-card p-6">
-                    <h3 className="text-lg font-semibold mb-4">Report Summary</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-xs text-muted-foreground font-mono uppercase">Target</div>
-                        <div className="text-sm font-mono mt-1">{selectedScan.target}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground font-mono uppercase">Scan Date</div>
-                        <div className="text-sm font-mono mt-1">
-                          {new Date(selectedScan.timestamp).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground font-mono uppercase">Security Grade</div>
-                        <div className={`text-2xl font-bold mt-1 ${getGradeColor(selectedScan.securityScore?.grade)}`}>
-                          {selectedScan.securityScore?.grade || '—'}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground font-mono uppercase">  Security Score</div>
-                        <div className="text-2xl font-bold mt-1">
-                          {selectedScan.securityScore?.overall ?? '—'}%
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Findings Summary */}
-                  <div className="border border-border bg-card p-6">
-                    <h3 className="text-lg font-semibold mb-4">Findings Overview</h3>
-                    <div className="grid grid-cols-5 gap-4">
-                      {(['critical', 'high', 'medium', 'low', 'info'] as const).map((severity) => {
-                        const count = selectedScan.vulnerabilities.filter(v => v.severity === severity).length
-                        const colors = {
-                          critical: 'text-[oklch(0.55_0.22_25)]',
-                          high: 'text-[oklch(0.65_0.25_45)]',
-                          medium: 'text-[oklch(0.70_0.15_85)]',
-                          low: 'text-[oklch(0.55_0.15_150)]',
-                          info: 'text-muted-foreground',
-                        }
-                        return (
-                          <div key={severity} className="text-center">
-                            <div className={`text-3xl font-bold ${colors[severity]}`}>{count}</div>
-                            <div className="text-xs uppercase text-muted-foreground mt-1">{severity}</div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Report Sections */}
-                  <div className="border border-border bg-card p-6">
-                    <h3 className="text-lg font-semibold mb-4">Report Contents</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3 text-sm">
-                        <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center font-mono text-xs font-bold text-primary">
-                          1
-                        </div>
-                        <div>
-                          <div className="font-semibold">Executive Summary</div>
-                          <div className="text-xs text-muted-foreground">
-                            High-level overview for management and stakeholders
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm">
-                        <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center font-mono text-xs font-bold text-primary">
-                          2
-                        </div>
-                        <div>
-                          <div className="font-semibold">Scope and Methodology</div>
-                          <div className="text-xs text-muted-foreground">
-                            Testing parameters, tools, and techniques used
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm">
-                        <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center font-mono text-xs font-bold text-primary">
-                          3
-                        </div>
-                        <div>
-                          <div className="font-semibold">Findings Summary Table</div>
-                          <div className="text-xs text-muted-foreground">
-                            Complete list of {selectedScan.vulnerabilities.length} vulnerabilities identified
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm">
-                        <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center font-mono text-xs font-bold text-primary">
-                          4
-                        </div>
-                        <div>
-                          <div className="font-semibold">Detailed Technical Findings</div>
-                          <div className="text-xs text-muted-foreground">
-                            In-depth analysis with evidence and remediation steps
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm">
-                        <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center font-mono text-xs font-bold text-primary">
-                          5
-                        </div>
-                        <div>
-                          <div className="font-semibold">Technical Appendix</div>
-                          <div className="text-xs text-muted-foreground">
-                            Network services, open ports, and testing tools
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm">
-                        <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center font-mono text-xs font-bold text-primary">
-                          6
-                        </div>
-                        <div>
-                          <div className="font-semibold">Conclusion and Recommendations</div>
-                          <div className="text-xs text-muted-foreground">
-                            Strategic advice and next steps
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action Info */}
-                  <div className="bg-muted/50 border border-border p-4 rounded">
-                    <div className="flex items-start gap-3">
-                      <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                      <div className="text-sm">
-                        <p className="font-semibold mb-1">Professional Technical Write-up</p>
-                        <p className="text-muted-foreground text-xs">
-                          This report follows industry-standard penetration testing report structures and includes
-                          executive summaries, technical details, risk assessments, and remediation recommendations.
-                          Click <strong>"View Full Report"</strong> to open the complete PDF document,
-                          or <strong>"Export Report"</strong> to save a copy to your preferred location.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex flex-col items-center justify-center h-full">
+                  <AlertTriangle className="w-8 h-8 text-muted-foreground mb-4" />
+                  <p className="text-sm text-muted-foreground font-mono">
+                    Failed to load report preview
+                  </p>
                 </div>
               )}
             </div>
@@ -447,7 +316,7 @@ export default function Reports() {
               <AlertTriangle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Reports Available</h3>
               <p className="text-muted-foreground text-sm font-mono mb-6">
-                Run a scan from the Scan Target page to generate professional penetration test reports.
+                Run a scan from the Scan Target page to generate penetration test reports.
               </p>
             </div>
           </div>

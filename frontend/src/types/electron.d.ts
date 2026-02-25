@@ -199,6 +199,7 @@ export interface ElectronAPI {
     getHistory: () => Promise<ReportMetadata[]>
     open: (id: string) => Promise<boolean>
     openFile: (filePath: string) => Promise<boolean>
+    readPdf: (filePath: string) => Promise<{ success: boolean; data?: string; error?: string }>
     delete: (id: string, deleteFile: boolean) => Promise<boolean>
   }
   versions: {
