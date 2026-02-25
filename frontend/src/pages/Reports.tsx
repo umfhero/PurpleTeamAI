@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { FileText, Download, Loader2, AlertTriangle, Calendar, Trash2 } from 'lucide-react'
 import type { NmapScanData } from '../types/electron.d'
 
@@ -12,6 +13,7 @@ function getGradeColor(grade?: string): string {
 }
 
 export default function Reports() {
+  const location = useLocation()
   const [scanHistory, setScanHistory] = useState<NmapScanData[]>([])
   const [selectedScan, setSelectedScan] = useState<NmapScanData | null>(null)
   const [reportFilePath, setReportFilePath] = useState<string | null>(null)
@@ -45,8 +47,15 @@ export default function Reports() {
         })
         setScanHistory(sortedScans)
 
-        // Auto-select first scan
-        if (sortedScans.length > 0) {
+        // Select the scan passed via navigation state, or default to the first
+        const navState = location.state as { scanTimestamp?: string } | null
+        const targetScan = navState?.scanTimestamp
+          ? sortedScans.find(s => s.timestamp === navState.scanTimestamp)
+          : null
+
+        if (targetScan) {
+          await selectScan(targetScan)
+        } else if (sortedScans.length > 0) {
           await selectScan(sortedScans[0])
         }
       }
