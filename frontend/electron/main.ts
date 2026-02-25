@@ -78,6 +78,14 @@ function createWindow() {
     }
   })
 
+  // Open external links in the system browser instead of Electron
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      import('electron').then(({ shell }) => shell.openExternal(url))
+    }
+    return { action: 'deny' }
+  })
+
   mainWindow.on('closed', () => {
     mainWindow = null
   })

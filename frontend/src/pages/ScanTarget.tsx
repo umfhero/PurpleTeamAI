@@ -348,7 +348,7 @@ export default function ScanTarget() {
                   </p>
                   {validationResult && (
                     <span className={`inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded ${validationResult.requiresDisclaimer
-                      ? 'bg-amber-500/20 text-amber-400'
+                      ? 'border border-amber-500/30 text-foreground font-bold'
                       : 'bg-[hsl(var(--low))]/20 text-[hsl(var(--low))]'
                       }`}>
                       {validationResult.requiresDisclaimer ? (
@@ -419,7 +419,7 @@ export default function ScanTarget() {
                 </p>
                 {validationResult && (
                   <span className={`inline-flex items-center gap-1.5 text-xs font-mono px-2 py-1 ${validationResult.requiresDisclaimer
-                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    ? 'text-foreground font-bold border border-amber-500/30'
                     : 'bg-[hsl(var(--low))]/20 text-[hsl(var(--low))] border border-[hsl(var(--low))]/30'
                     }`}>
                     {validationResult.requiresDisclaimer ? (
@@ -452,25 +452,37 @@ export default function ScanTarget() {
 
                 {/* UK Computer Misuse Act Disclaimer — shown for non-whitelisted targets */}
                 {validationResult?.requiresDisclaimer && (
-                  <div className="border border-amber-500/50 bg-amber-500/5 p-4 space-y-3">
+                  <div className="border border-amber-500/50 p-4 space-y-3">
                     <div className="flex items-center gap-2">
-                      <ShieldAlert className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                      <h4 className="text-sm font-mono uppercase tracking-wider text-amber-400">Legal Disclaimer</h4>
+                      <ShieldAlert className="w-5 h-5 text-foreground flex-shrink-0" />
+                      <h4 className="text-sm font-mono uppercase tracking-wider text-foreground font-bold">Legal Disclaimer</h4>
                     </div>
-                    <div className="text-xs font-mono text-muted-foreground space-y-2 pl-7">
+                    <div className="text-xs font-mono text-muted-foreground space-y-2 pl-7 [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 hover:[&_a]:text-primary/80">
                       <p>
-                        Under the <span className="text-foreground">Computer Misuse Act 1990 (UK)</span>, it is an offence
-                        to perform unauthorised access to, or unauthorised modification of, computer material.
-                        Scanning a system without explicit permission from the owner is illegal.
+                        You must ensure that scanning activities comply not only with applicable law
+                        (e.g., <a href="https://www.legislation.gov.uk/ukpga/1990/18/contents" target="_blank" rel="noopener noreferrer" className="font-bold">Computer Misuse Act 1990</a>) but also with the
+                        <span className="text-foreground font-bold"> Terms of Service</span> and
+                        <span className="text-foreground font-bold"> Acceptable Use Policies</span> of any hosting provider,
+                        cloud provider, or infrastructure operator associated with the target system.
                       </p>
                       <p>
+                        This tool performs <span className="text-foreground">full-port scanning, NSE vulnerability scripts,
+                        and aggressive service fingerprinting</span> which may:
+                      </p>
+                      <ul className="list-disc pl-4 space-y-1">
+                        <li>Trigger abuse detection systems (e.g., <a href="https://www.netlify.com/legal/acceptable-use-policy/" target="_blank" rel="noopener noreferrer">Netlify AUP</a>, <a href="https://aws.amazon.com/aup/" target="_blank" rel="noopener noreferrer">AWS AUP</a>, <a href="https://www.microsoft.com/en-us/legal/terms-of-use" target="_blank" rel="noopener noreferrer">Azure ToS</a>)</li>
+                        <li>Result in your IP being blocked by the target infrastructure</li>
+                        <li>Lead to account suspension with hosting or cloud providers</li>
+                        <li>Constitute a <a href="https://www.legislation.gov.uk/ukpga/1990/18/section/1" target="_blank" rel="noopener noreferrer">criminal offence</a> if performed without authorisation</li>
+                      </ul>
+                      <p className="pt-1">
                         By proceeding, you confirm that:
                       </p>
                       <ul className="list-disc pl-4 space-y-1">
-                        <li>You have <span className="text-foreground">explicit written authorisation</span> from the owner of the target system to perform this scan.</li>
-                        <li>You understand that <span className="text-foreground">unauthorised scanning may constitute a criminal offence</span>.</li>
-                        <li>You accept full responsibility for any consequences resulting from this scan.</li>
-                        <li>This tool is intended for <span className="text-foreground">authorised security testing only</span>.</li>
+                        <li>You have <span className="text-foreground font-bold">explicit written authorisation</span> from the system owner to perform this scan.</li>
+                        <li>You have verified that scanning is <span className="text-foreground font-bold">permitted under the target's hosting provider ToS/AUP</span>.</li>
+                        <li>You accept full responsibility for any consequences, including legal action, IP blocking, or account suspension.</li>
+                        <li>This tool is intended for <span className="text-foreground font-bold">authorised security testing only</span>.</li>
                       </ul>
                     </div>
                     <label className="flex items-center gap-3 pl-7 pt-1 cursor-pointer select-none">
