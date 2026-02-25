@@ -89,6 +89,44 @@ export interface ScanResult {
   data?: NmapScanData
 }
 
+interface NormalizedTarget {
+  hostname: string       // bare hostname/IP for Nmap (e.g. "localhost")
+  port: number | null    // explicit port from URL, if any (e.g. 8080)
+  isLocalhost: boolean   // true for localhost / 127.0.0.1 / ::1
+  original: string       // the raw input string
+}
+
+/**
+ * Normalize a user-supplied target string.
+ * Strips URL schemes (http://, https://), paths, and extracts an explicit port if present.
+ * Nmap expects a bare hostname or IP — not a full URL.
+ */
+function normalizeTarget(raw: string): NormalizedTarget {
+  let cleaned = raw.trim()
+  const original = cleaned
+
+  // Strip scheme
+  cleaned = cleaned.replace(/^https?:\/\//i, '')
+
+  // Strip path / query / fragment  (everything after first /)
+  cleaned = cleaned.replace(/\/.*$/, '')
+
+  // Extract explicit port  (e.g. "localhost:8080" → hostname=localhost, port=8080)
+  let port: number | null = null
+  const portMatch = cleaned.match(/^(.+):(\d+)$/)
+  if (portMatch) {
+    cleaned = portMatch[1]
+    port = parseInt(portMatch[2], 10)
+  }
+
+  // Strip surrounding brackets for IPv6  (e.g. "[::1]" → "::1")
+  cleaned = cleaned.replace(/^\[|\]$/g, '')
+
+  const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(cleaned.toLowerCase())
+
+  return { hostname: cleaned, port, isLocalhost, original }
+}
+
 /**
  * Merge scan results from two phases, deduplicating ports and vulnerabilities.
  */
@@ -222,7 +260,11 @@ export async function runNmapScan(
   onProgress?: (line: string) => void,
   onPhaseComplete?: (data: NmapScanData) => void,
 ): Promise<ScanResult> {
-  const { target, timeout = 600 } = options // 10 min per phase default
+  const { target: rawTarget, timeout = 600 } = options // 10 min per phase default
+
+  // Normalize the target: strip URL scheme/path, extract explicit port, detect localhost
+  const normalized = normalizeTarget(rawTarget)
+  const target = normalized.hostname
 
   await ensureScansDir()
   scanAborted = false
@@ -241,6 +283,22 @@ export async function runNmapScan(
     return { success: false, message: errorMsg }
   }
 
+  if (normalized.hostname !== normalized.original) {
+    onProgress?.(`[Scanner] Normalized target: "${normalized.original}" → "${target}"${normalized.port ? ` (port ${normalized.port})` : ''}\n`)
+  }
+
+  // On Windows, localhost/loopback requires TCP connect scan (-sT) instead of the
+  // default SYN scan (-sS) because raw packet scanning on the loopback interface
+  // is not supported by Npcap/WinPcap.
+  const useConnectScan = process.platform === 'win32' && normalized.isLocalhost
+  if (useConnectScan) {
+    onProgress?.(`[Scanner] Windows localhost detected — using TCP connect scan (-sT)\n`)
+  }
+
+  // If the user specified a port in the URL (e.g. localhost:8080), include it
+  // explicitly so it's always scanned even in Phase 1's -F (top 100).
+  const explicitPortArg = normalized.port ? `-p ${normalized.port},1-1000` : '-F'
+
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 
   // ═══════════════════════════════════════════════════════════
@@ -250,7 +308,8 @@ export async function runNmapScan(
   // ═══════════════════════════════════════════════════════════
   const phase1File = path.join(SCANS_DIR, `scan-${timestamp}.xml`)
   const phase1Args = [
-    '-sV', '-sC', '-T3', '-F',
+    ...(useConnectScan ? ['-sT'] : []),
+    '-sV', '-sC', '-T3', explicitPortArg,
     '--script=vuln,vulners,ssl-enum-ciphers',
     '-oX', phase1File, target,
   ]
@@ -260,7 +319,7 @@ export async function runNmapScan(
   onProgress?.(`  Top 100 ports · Service detection · Common vulns\n`)
   onProgress?.(`${'═'.repeat(52)}\n\n`)
 
-  const phase1 = await runNmapPhase(nmapExecutable, phase1Args, phase1File, target, timeout, onProgress)
+  const phase1 = await runNmapPhase(nmapExecutable, phase1Args, phase1File, rawTarget, timeout, onProgress)
 
   if (!phase1.success || !phase1.data) {
     return phase1
@@ -297,6 +356,7 @@ export async function runNmapScan(
   ].join(',')
 
   const phase2Args = [
+    ...(useConnectScan ? ['-sT'] : []),
     '-sV', '-T3', '-p-',
     `--script=${deepScripts}`,
     '-oX', phase2File, target,
@@ -307,7 +367,7 @@ export async function runNmapScan(
   onProgress?.(`  All 65535 ports · SQLi · XSS · CSRF · Enumeration\n`)
   onProgress?.(`${'═'.repeat(52)}\n\n`)
 
-  const phase2 = await runNmapPhase(nmapExecutable, phase2Args, phase2File, target, timeout * 3, onProgress)
+  const phase2 = await runNmapPhase(nmapExecutable, phase2Args, phase2File, rawTarget, timeout * 3, onProgress)
 
   // If Phase 2 fails or was aborted, return Phase 1 results (still valid)
   if (!phase2.success || !phase2.data) {

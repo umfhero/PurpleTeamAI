@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VulnTest Corp — Home</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: monospace;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            padding: 2rem;
+        }
+
+        h1 {
+            color: #c084fc;
+            margin-bottom: 1rem;
+        }
+
+        nav {
+            margin: 1rem 0;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            color: #93c5fd;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border: 1px solid #333;
+        }
+
+        nav a:hover {
+            background: #1a1a2e;
+        }
+
+        .hero {
+            margin: 2rem 0;
+            padding: 1.5rem;
+            border: 1px solid #333;
+        }
+
+        form {
+            margin: 1rem 0;
+        }
+
+        input[type="text"] {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            padding: 0.5rem;
+            font-family: monospace;
+            width: 300px;
+        }
+
+        button {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-family: monospace;
+        }
+
+        button:hover {
+            background: #6d28d9;
+        }
+
+        .footer {
+            margin-top: 3rem;
+            color: #666;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>VulnTest Corp</h1>
+    <p>Welcome to our totally secure website.</p>
+
+    <nav>
+        <a href="/">Home</a>
+        <a href="/login.html">Login</a>
+        <a href="/guestbook.html">Guestbook</a>
+        <a href="/uploads">Uploads</a>
+        <a href="/admin/">Admin Panel</a>
+    </nav>
+
+    <div class="hero">
+        <h2>Search Our Site</h2>
+        <!-- No CSRF token on this form -->
+        <form action="/search" method="GET">
+            <input type="text" name="q" placeholder="Search..." />
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    <div class="hero">
+        <h2>About Us</h2>
+        <p>VulnTest Corp is a leading provider of insecure web applications.</p>
+        <p>We take security very seriously (not really).</p>
+    </div>
+
+    <!-- DOM-based XSS: reads hash fragment and writes to DOM -->
+    <div id="welcome-msg"></div>
+    <script>
+        // Vulnerable: reads URL hash and injects directly into innerHTML
+        var name = decodeURIComponent(window.location.hash.substring(1));
+        if (name) {
+            document.getElementById('welcome-msg').innerHTML = '<p>Welcome, ' + name + '!</p>';
+        }
+    </script>
+
+    <div class="footer">
+        &copy; 2026 VulnTest Corp — Powered by Express
+    </div>
+</body>
+
+</html>

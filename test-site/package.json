@@ -1,0 +1,15 @@
+{
+  "name": "purpleteam-test-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Intentionally vulnerable test site for PurpleTeam scanner testing",
+  "scripts": {
+    "start": "node server.js",
+    "start:fixed": "node server-fixed.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "cookie-parser": "^1.4.7",
+    "serve-index": "^1.9.1"
+  }
+}

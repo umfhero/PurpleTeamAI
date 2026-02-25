@@ -1,0 +1,8 @@
+Allow: /
+Allow: /admin/
+Allow: /uploads/
+Allow: /.git/
+Disallow:
+
+User-agent: *
+Sitemap: http://localhost:8080/sitemap.xml
