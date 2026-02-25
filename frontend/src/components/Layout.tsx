@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Crosshair, FileText, Menu } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useState } from 'react'
+import TitleBar from './TitleBar'
 
 export default function Layout() {
     const location = useLocation()
@@ -14,7 +15,9 @@ export default function Layout() {
     ]
 
     return (
-        <div className="flex h-screen bg-background text-foreground overflow-hidden">
+        <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
+            <TitleBar />
+            <div className="flex flex-1 overflow-hidden">
             {/* Sidebar */}
             <aside
                 className={cn(
@@ -23,7 +26,12 @@ export default function Layout() {
                 )}
             >
                 <div className="p-4 flex items-center justify-between border-b border-border h-16">
-                    {sidebarOpen && <span className="font-bold text-xl text-primary tracking-tight">PURPLETEAM <span className="text-foreground">SUITE</span></span>}
+                    {sidebarOpen && (
+                        <div className="flex flex-col items-start leading-tight">
+                            <span className="font-bold text-xl text-primary tracking-tight">PURPLETEAM</span>
+                            <span className="font-bold text-sm text-foreground tracking-tight">SUITE</span>
+                        </div>
+                    )}
                     <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-muted border border-transparent hover:border-border">
                         <Menu size={18} />
                     </button>
@@ -54,7 +62,7 @@ export default function Layout() {
                 {/* Version info */}
                 {sidebarOpen && (
                     <div className="p-4 border-t border-border text-xs font-mono text-muted-foreground">
-                        v2.1.0-dev
+                        v2.2.0-dev
                     </div>
                 )}
             </aside>
@@ -77,6 +85,7 @@ export default function Layout() {
                     <Outlet />
                 </div>
             </main>
+            </div>
         </div>
     )
 }

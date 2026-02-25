@@ -260,7 +260,7 @@ export async function runNmapScan(
   onProgress?: (line: string) => void,
   onPhaseComplete?: (data: NmapScanData) => void,
 ): Promise<ScanResult> {
-  const { target: rawTarget, timeout = 600 } = options // 10 min per phase default
+  const { target: rawTarget, timeout = 900 } = options // 15 min per phase default
 
   // Normalize the target: strip URL scheme/path, extract explicit port, detect localhost
   const normalized = normalizeTarget(rawTarget)
@@ -309,14 +309,14 @@ export async function runNmapScan(
   const phase1File = path.join(SCANS_DIR, `scan-${timestamp}.xml`)
   const phase1Args = [
     ...(useConnectScan ? ['-sT'] : []),
-    '-sV', '-sC', '-T3', explicitPortArg,
-    '--script=vuln,vulners,ssl-enum-ciphers',
+    '-sV', '-sC', '-T4', explicitPortArg,
+    '--script=vulners,ssl-enum-ciphers',
     '-oX', phase1File, target,
   ]
 
   onProgress?.(`\n${'═'.repeat(52)}\n`)
   onProgress?.(`  PHASE 1: Quick Discovery Scan\n`)
-  onProgress?.(`  Top 100 ports · Service detection · Common vulns\n`)
+  onProgress?.(`  Top 100 ports · Service detection · Vulners · SSL\n`)
   onProgress?.(`${'═'.repeat(52)}\n\n`)
 
   const phase1 = await runNmapPhase(nmapExecutable, phase1Args, phase1File, rawTarget, timeout, onProgress)

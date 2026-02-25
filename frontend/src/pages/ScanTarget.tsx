@@ -5,6 +5,8 @@ import { useScanStore } from '../lib/useScanStore'
 import type { ScanState } from '../lib/scanStore'
 
 // Progress step definitions
+const MAX_RETRIES = 2 // Auto-retry up to 2 times on failure
+
 const PROGRESS_STEPS = [
   { id: 'validating', label: 'Validating', description: 'Checking target' },
   { id: 'confirming', label: 'Confirm', description: 'Awaiting user action' },
@@ -21,6 +23,7 @@ function ScanProgressStepper({ currentState, scanLogs }: { currentState: ScanSta
   // Get the current step index
   const getCurrentStepIndex = () => {
     if (currentState === 'idle' || currentState === 'error') return -1
+    if (currentState === 'retrying') return PROGRESS_STEPS.findIndex(step => step.id === 'scanning')
     return PROGRESS_STEPS.findIndex(step => step.id === currentState)
   }
 
@@ -35,6 +38,9 @@ function ScanProgressStepper({ currentState, scanLogs }: { currentState: ScanSta
 
   if (currentState === 'idle' || currentState === 'error') return null
 
+  // Map 'retrying' to show the scanning step as active (retry feeds back into scanning)
+  const displayState = currentState === 'retrying' ? 'scanning' : currentState
+
   return (
     <div className="border border-border bg-card animate-stagger-in">
       {/* Header */}
@@ -46,7 +52,7 @@ function ScanProgressStepper({ currentState, scanLogs }: { currentState: ScanSta
       <div>
         <div className="flex items-stretch justify-between gap-0">
           {PROGRESS_STEPS.map((step, index) => {
-            const isActive = step.id === currentState
+            const isActive = step.id === displayState
             const isComplete = currentIndex > index
 
             return (
@@ -90,7 +96,7 @@ function ScanProgressStepper({ currentState, scanLogs }: { currentState: ScanSta
       </div>
 
       {/* Live Terminal - show during scanning, deepening, and analyzing */}
-      {(currentState === 'scanning' || currentState === 'deepening' || currentState === 'analyzing') && scanLogs.length > 0 && (
+      {(currentState === 'scanning' || currentState === 'deepening' || currentState === 'analyzing' || currentState === 'retrying') && scanLogs.length > 0 && (
         <div className="border-t border-border">
           <div className="p-2 border-b border-border bg-muted/20 flex items-center gap-2">
             <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
@@ -140,7 +146,8 @@ export default function ScanTarget() {
 
   const [validationResult, setValidationResult] = useState<{ allowed: boolean; message: string; requiresDisclaimer: boolean } | null>(null)
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false)
-  const [isInputCollapsed, setIsInputCollapsed] = useState(scanState === 'scanning' || scanState === 'deepening' || scanState === 'analyzing')
+  const [isInputCollapsed, setIsInputCollapsed] = useState(scanState === 'scanning' || scanState === 'deepening' || scanState === 'analyzing' || scanState === 'retrying')
+  const [retryAttempt, setRetryAttempt] = useState(0)
 
   // Tab-autocomplete for known targets
   const KNOWN_TARGETS = [
@@ -199,80 +206,119 @@ export default function ScanTarget() {
     }
   }
 
+  /**
+   * Run a single scan attempt. Returns { success, result, errorMessage }.
+   */
+  const runScanAttempt = async (): Promise<{ success: boolean; errorMessage?: string }> => {
+    // Set up progress listener
+    const removeListener = window.electronAPI!.scanner.onProgress((line: string) => {
+      appendLog(line)
+    })
+    setProgressCleanup(removeListener)
+
+    // Set up phase result listener — fires when Phase 1 completes
+    const removePhaseListener = window.electronAPI!.scanner.onPhaseResult((data) => {
+      console.log('[ScanTarget] Phase 1 complete, showing preliminary results')
+      setScanResult(data)
+      setScanState('deepening') // Transition to Phase 2
+    })
+    setPhaseCleanup(removePhaseListener)
+
+    // Run progressive scan (Phase 1 + Phase 2 internally)
+    console.log(`[ScanTarget] Starting progressive scan for: ${target}`)
+    const result = await window.electronAPI!.scanner.runNmap({ target })
+
+    // Clean up listeners
+    removeListener()
+    removePhaseListener()
+    setProgressCleanup(null)
+    setPhaseCleanup(null)
+
+    console.log(`[ScanTarget] Scan result:`, result)
+
+    if (result.success && result.data) {
+      const scanData = result.data
+
+      // Analyze with LLM if we have vulnerabilities
+      if (scanData.vulnerabilities.length > 0) {
+        console.log(`[ScanTarget] Starting LLM analysis for ${scanData.vulnerabilities.length} vulnerabilities`)
+        setScanState('analyzing')
+        appendLog('\n[LLM] Starting AI analysis...\n')
+
+        try {
+          const llmResult = await window.electronAPI!.llm.analyzeVulnerabilities({
+            vulnerabilities: scanData.vulnerabilities,
+            target: scanData.target,
+            scanTimestamp: scanData.timestamp,
+          })
+
+          if (llmResult.success) {
+            scanData.llmAnalysis = llmResult
+            console.log(`[ScanTarget] LLM analysis complete: ${llmResult.analyses.length} analyses`)
+            appendLog(`[LLM] Analysis complete: ${llmResult.analyses.length} vulnerabilities analyzed\n`)
+          } else {
+            console.warn('[ScanTarget] LLM analysis failed:', llmResult.error)
+            appendLog(`[LLM] Analysis failed: ${llmResult.error}\n`)
+          }
+        } catch (llmError) {
+          console.error('[ScanTarget] LLM analysis error:', llmError)
+          appendLog(`[LLM] Error: ${llmError}\n`)
+        }
+      } else {
+        console.log('[ScanTarget] No vulnerabilities found, skipping LLM analysis')
+      }
+
+      setScanResult(scanData)
+      setScanState('complete')
+      console.log('[ScanTarget] Scan pipeline complete')
+      return { success: true }
+    } else {
+      return { success: false, errorMessage: result.message || 'Scan failed' }
+    }
+  }
+
   const startScan = async () => {
     setScanState('scanning')
     setScanError(null)
     setScanLogs([]) // Clear previous logs
     setIsInputCollapsed(true) // Auto-collapse input section
+    setRetryAttempt(0)
 
     try {
       if (window.electronAPI) {
-        // Set up progress listener
-        const removeListener = window.electronAPI.scanner.onProgress((line: string) => {
-          appendLog(line)
-        })
-        setProgressCleanup(removeListener)
+        let attempt = 0
+        let lastError = ''
 
-        // Set up phase result listener — fires when Phase 1 completes
-        const removePhaseListener = window.electronAPI.scanner.onPhaseResult((data) => {
-          console.log('[ScanTarget] Phase 1 complete, showing preliminary results')
-          setScanResult(data)
-          setScanState('deepening') // Transition to Phase 2
-        })
-        setPhaseCleanup(removePhaseListener)
+        while (attempt <= MAX_RETRIES) {
+          if (attempt > 0) {
+            // Show retry state in UI
+            console.log(`[ScanTarget] Auto-retrying scan (attempt ${attempt + 1}/${MAX_RETRIES + 1})`)
+            setScanState('retrying')
+            setRetryAttempt(attempt)
+            appendLog(`\n${'─'.repeat(52)}\n`)
+            appendLog(`  ⟳ Scan failed — automatically retrying (attempt ${attempt + 1} of ${MAX_RETRIES + 1})\n`)
+            appendLog(`  Previous error: ${lastError}\n`)
+            appendLog(`${'─'.repeat(52)}\n\n`)
 
-        // Run progressive scan (Phase 1 + Phase 2 internally)
-        console.log(`[ScanTarget] Starting progressive scan for: ${target}`)
-        const result = await window.electronAPI.scanner.runNmap({ target })
-
-        // Clean up listeners
-        removeListener()
-        removePhaseListener()
-        setProgressCleanup(null)
-        setPhaseCleanup(null)
-
-        console.log(`[ScanTarget] Scan result:`, result)
-
-        if (result.success && result.data) {
-          const scanData = result.data
-
-          // Analyze with LLM if we have vulnerabilities
-          if (scanData.vulnerabilities.length > 0) {
-            console.log(`[ScanTarget] Starting LLM analysis for ${scanData.vulnerabilities.length} vulnerabilities`)
-            setScanState('analyzing')
-            appendLog('\n[LLM] Starting AI analysis...\n')
-
-            try {
-              const llmResult = await window.electronAPI.llm.analyzeVulnerabilities({
-                vulnerabilities: scanData.vulnerabilities,
-                target: scanData.target,
-                scanTimestamp: scanData.timestamp,
-              })
-
-              if (llmResult.success) {
-                scanData.llmAnalysis = llmResult
-                console.log(`[ScanTarget] LLM analysis complete: ${llmResult.analyses.length} analyses`)
-                appendLog(`[LLM] Analysis complete: ${llmResult.analyses.length} vulnerabilities analyzed\n`)
-              } else {
-                console.warn('[ScanTarget] LLM analysis failed:', llmResult.error)
-                appendLog(`[LLM] Analysis failed: ${llmResult.error}\n`)
-              }
-            } catch (llmError) {
-              console.error('[ScanTarget] LLM analysis error:', llmError)
-              appendLog(`[LLM] Error: ${llmError}\n`)
-            }
-          } else {
-            console.log('[ScanTarget] No vulnerabilities found, skipping LLM analysis')
+            // Brief pause before retrying so the user can see the message
+            await new Promise(resolve => setTimeout(resolve, 3000))
+            setScanState('scanning')
           }
 
-          setScanResult(scanData)
-          setScanState('complete')
-          console.log('[ScanTarget] Scan pipeline complete')
-        } else {
-          setScanError(result.message || 'Scan failed')
-          setScanState('error')
-          console.error('[ScanTarget] Scan failed:', result.message)
+          const { success, errorMessage } = await runScanAttempt()
+
+          if (success) {
+            return // Done — state is already set to 'complete' inside runScanAttempt
+          }
+
+          lastError = errorMessage || 'Unknown error'
+          attempt++
         }
+
+        // All attempts exhausted
+        setScanError(`Scan failed after ${MAX_RETRIES + 1} attempts: ${lastError}`)
+        setScanState('error')
+        console.error(`[ScanTarget] Scan failed after ${MAX_RETRIES + 1} attempts: ${lastError}`)
       } else {
         // Development simulation
         await new Promise(resolve => setTimeout(resolve, 2000))
@@ -308,6 +354,7 @@ export default function ScanTarget() {
     setValidationResult(null)
     setDisclaimerAccepted(false)
     setIsInputCollapsed(false)
+    setRetryAttempt(0)
   }
 
   const stopScan = async () => {
@@ -389,7 +436,7 @@ export default function ScanTarget() {
                       onChange={(e) => setTarget(e.target.value)}
                       onKeyDown={handleTabComplete}
                       placeholder="testphp.vulnweb.com"
-                      disabled={scanState === 'scanning'}
+                      disabled={scanState === 'scanning' || scanState === 'retrying'}
                       autoComplete="off"
                       className="w-full px-4 py-3 bg-input border border-border text-foreground font-mono 
                                placeholder:text-muted-foreground focus:outline-none focus:border-primary
@@ -398,7 +445,7 @@ export default function ScanTarget() {
                   </div>
                   <button
                     onClick={validateTarget}
-                    disabled={scanState === 'scanning' || scanState === 'validating'}
+                    disabled={scanState === 'scanning' || scanState === 'validating' || scanState === 'retrying'}
                     className="px-6 py-3 bg-primary text-primary-foreground font-mono uppercase tracking-wider
                              border border-primary hover:bg-primary/90 disabled:opacity-50
                              transition-transform"
@@ -525,6 +572,27 @@ export default function ScanTarget() {
 
         {/* Scan Progress Stepper - shows during scanning and analyzing */}
         <ScanProgressStepper currentState={scanState} scanLogs={scanLogs} />
+
+        {/* Retrying Header */}
+        {scanState === 'retrying' && (
+          <div className="border border-amber-500 bg-amber-500/10 p-4 flex items-center gap-3 animate-stagger-in" style={{ animationDelay: '150ms' }}>
+            <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
+            <div className="flex-1">
+              <p className="font-mono text-sm font-bold text-amber-500">Retrying Scan (Attempt {retryAttempt + 1} of {MAX_RETRIES + 1})</p>
+              <p className="text-xs text-muted-foreground font-mono mt-1">
+                Previous attempt failed — automatically retrying in a moment...
+              </p>
+            </div>
+            <button
+              onClick={stopScan}
+              className="px-4 py-2 bg-[hsl(var(--critical))]/10 text-[hsl(var(--critical))] font-mono text-xs uppercase tracking-wider
+                       border border-[hsl(var(--critical))] hover:bg-[hsl(var(--critical))]/20 transition-colors
+                       flex items-center gap-2"
+            >
+              <Square className="w-3 h-3 fill-current" /> Stop
+            </button>
+          </div>
+        )}
 
         {/* Scanning Header - Phase 1 */}
         {scanState === 'scanning' && (

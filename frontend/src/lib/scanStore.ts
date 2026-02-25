@@ -3,7 +3,7 @@
 
 import type { NmapScanData } from '../types/electron'
 
-export type ScanState = 'idle' | 'validating' | 'confirming' | 'scanning' | 'deepening' | 'analyzing' | 'complete' | 'error'
+export type ScanState = 'idle' | 'validating' | 'confirming' | 'scanning' | 'deepening' | 'analyzing' | 'retrying' | 'complete' | 'error'
 
 interface ScanStore {
   // Scan state

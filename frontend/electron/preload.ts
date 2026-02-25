@@ -49,6 +49,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     chrome: process.versions.chrome,
     electron: process.versions.electron,
   },
+
+  // Window controls (for frameless window)
+  windowControls: {
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+    close: () => ipcRenderer.invoke('window:close'),
+    isMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+  },
 })
 
 // Type definitions for the exposed API
@@ -64,6 +72,12 @@ declare global {
         node: string
         chrome: string
         electron: string
+      }
+      windowControls: {
+        minimize: () => Promise<void>
+        maximize: () => Promise<void>
+        close: () => Promise<void>
+        isMaximized: () => Promise<boolean>
       }
     }
   }

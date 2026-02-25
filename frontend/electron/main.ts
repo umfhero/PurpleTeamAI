@@ -43,7 +43,8 @@ function createWindow() {
     minHeight: 700,
     title: 'PurpleTeam Suite',
     backgroundColor: '#0a0a0a',
-    autoHideMenuBar: true, // Hide menu bar (File, Edit, View, etc.)
+    frame: false, // Frameless so no OS title bar icon; taskbar icon still set below
+    autoHideMenuBar: true,
     icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -108,6 +109,21 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+
+// ============================================
+// IPC Handlers - Window controls
+// ============================================
+
+ipcMain.handle('window:minimize', () => mainWindow?.minimize())
+ipcMain.handle('window:maximize', () => {
+  if (mainWindow?.isMaximized()) {
+    mainWindow.unmaximize()
+  } else {
+    mainWindow?.maximize()
+  }
+})
+ipcMain.handle('window:close', () => mainWindow?.close())
+ipcMain.handle('window:is-maximized', () => mainWindow?.isMaximized() ?? false)
 
 // ============================================
 // IPC Handlers - Scanner integration

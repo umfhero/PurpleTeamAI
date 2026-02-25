@@ -6,19 +6,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const publicDir = join(__dirname, '../public');
-const svgPath = join(publicDir, 'icon.svg');
+const srcPath = join(publicDir, 'PT.png');
 const pngPath = join(publicDir, 'icon.png');
 
-console.log('Converting icon.svg to icon.png...');
+console.log('Resizing PT.png to icon.png...');
 
-sharp(svgPath)
+sharp(srcPath)
   .resize(256, 256)
   .png()
   .toFile(pngPath)
   .then(() => {
-    console.log('✓ Icon converted successfully: public/icon.png');
+    console.log('✓ Icon generated successfully: public/icon.png');
   })
   .catch((err) => {
-    console.error('Error converting icon:', err);
+    console.error('Error generating icon:', err);
     process.exit(1);
   });
