@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   scanner: {
     runNmap: (options) => ipcRenderer.invoke('scanner:run-nmap', options),
     getHistory: () => ipcRenderer.invoke('scanner:get-history'),
+    getGroupedHistory: () => ipcRenderer.invoke('scanner:get-grouped-history'),
+    getDeltas: (target) => ipcRenderer.invoke('scanner:get-deltas', target),
     validateTarget: (target) => ipcRenderer.invoke('scanner:validate-target', target),
     abort: () => ipcRenderer.invoke('scanner:abort'),
     deleteScan: (timestamp) => ipcRenderer.invoke('scanner:delete-scan', timestamp),
@@ -32,6 +34,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     export: (options) => ipcRenderer.invoke('report:export', options),
     exportPentest: (scan) => ipcRenderer.invoke('report:export-pentest', scan),
     generatePentest: (scan) => ipcRenderer.invoke('report:generate-pentest', scan),
+    generateDelta: (olderTs, newerTs) => ipcRenderer.invoke('report:generate-delta', olderTs, newerTs),
+    exportDelta: (olderTs, newerTs) => ipcRenderer.invoke('report:export-delta', olderTs, newerTs),
     getHistory: () => ipcRenderer.invoke('report:get-history'),
     open: (id) => ipcRenderer.invoke('report:open', id),
     openFile: (filePath) => ipcRenderer.invoke('report:open-file', filePath),

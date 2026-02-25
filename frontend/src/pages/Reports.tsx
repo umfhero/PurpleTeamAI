@@ -293,127 +293,116 @@ export default function Reports() {
                   {/* ── Expanded content ── */}
                   {isExpanded && (
                     <div className="bg-muted/10">
-                      {/* Section label: Full Reports */}
-                      <div className="px-7 py-1 border-b border-border/40">
-                        <span className="text-[9px] uppercase tracking-widest text-muted-foreground opacity-60 font-mono">
-                          Full Reports
-                        </span>
-                      </div>
-
-                      {/* Individual scan entries */}
+                      {/* Interleaved: scan entry, then comparison to next older scan */}
                       {group.scans.map((scan, idx) => {
                         const isSelected = viewMode === 'full' && selectedScan?.timestamp === scan.timestamp
                         const scanLabel = idx === 0 ? 'Latest' : `Scan ${group.count - idx}`
                         const critCount = scan.vulnerabilities.filter(v => v.severity === 'critical').length
                         const highCount = scan.vulnerabilities.filter(v => v.severity === 'high').length
 
+                        // Find the comparison that links this scan (newer) to the next older scan
+                        const nextOlderScan = group.scans[idx + 1]
+                        const delta = nextOlderScan && chain
+                          ? chain.deltas.find(d =>
+                              d.olderTimestamp === nextOlderScan.timestamp &&
+                              d.newerTimestamp === scan.timestamp)
+                          : null
+
                         return (
-                          <button
-                            key={scan.timestamp}
-                            onClick={() => selectFullReport(scan)}
-                            onContextMenu={(e) => {
-                              e.preventDefault()
-                              setContextMenu({ x: e.clientX, y: e.clientY, scan })
-                            }}
-                            className={`w-full text-left pl-7 pr-3 py-2 border-b border-border/50 transition-colors font-mono text-xs
-                              ${isSelected
-                                ? 'bg-primary/10 text-foreground border-l-2 border-l-primary'
-                                : 'hover:bg-muted/30 text-muted-foreground hover:text-foreground'}`}
-                          >
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="text-[10px] opacity-60 uppercase tracking-wide">{scanLabel}</span>
-                              <span className={`text-[10px] font-bold ${getGradeColor(scan.securityScore?.grade)}`}>
-                                {scan.securityScore?.grade ?? '—'}
-                              </span>
-                            </div>
-                            <div className="text-[10px] opacity-50 mt-0.5 truncate">
-                              {new Date(scan.timestamp).toLocaleString()}
-                            </div>
-                            <div className="flex gap-1.5 mt-0.5 text-[10px]">
-                              {critCount > 0 && <span className="text-[oklch(0.55_0.22_25)]">C:{critCount}</span>}
-                              {highCount > 0 && <span className="text-[oklch(0.65_0.25_45)]">H:{highCount}</span>}
-                              <span className="text-muted-foreground">{scan.vulnerabilities.length} findings</span>
-                            </div>
-                          </button>
+                          <div key={scan.timestamp}>
+                            {/* ── Scan entry ── */}
+                            <button
+                              onClick={() => selectFullReport(scan)}
+                              onContextMenu={(e) => {
+                                e.preventDefault()
+                                setContextMenu({ x: e.clientX, y: e.clientY, scan })
+                              }}
+                              className={`w-full text-left pl-7 pr-3 py-2 border-b border-border/50 transition-colors font-mono text-xs
+                                ${isSelected
+                                  ? 'bg-primary/10 text-foreground border-l-2 border-l-primary'
+                                  : 'hover:bg-muted/30 text-muted-foreground hover:text-foreground'}`}
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-[10px] text-foreground uppercase tracking-wide">{scanLabel}</span>
+                                <span className={`text-[10px] font-bold ${getGradeColor(scan.securityScore?.grade)}`}>
+                                  {scan.securityScore?.grade ?? '—'}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-foreground/70 mt-0.5 truncate">
+                                {new Date(scan.timestamp).toLocaleString()}
+                              </div>
+                              <div className="flex gap-1.5 mt-0.5 text-[10px]">
+                                {critCount > 0 && <span className="text-[oklch(0.55_0.22_25)]">C:{critCount}</span>}
+                                {highCount > 0 && <span className="text-[oklch(0.65_0.25_45)]">H:{highCount}</span>}
+                                <span className="text-muted-foreground">{scan.vulnerabilities.length} findings</span>
+                              </div>
+                            </button>
+
+                            {/* ── Comparison to next older scan (inline) ── */}
+                            {delta && (() => {
+                              const olderLabel = getScanLabel(delta.olderTimestamp)
+                              const newerLabel = getScanLabel(delta.newerTimestamp)
+                              const isDeltaSelected =
+                                viewMode === 'comparison' &&
+                                selectedDelta?.olderTimestamp === delta.olderTimestamp &&
+                                selectedDelta?.newerTimestamp === delta.newerTimestamp
+
+                              if (!delta.hasChanges) {
+                                return (
+                                  <div className="pl-9 pr-3 py-1.5 border-b border-border/50 font-mono text-[10px]
+                                                   text-foreground/50 flex items-center gap-1.5 bg-muted/5">
+                                    <Minus className="w-3 h-3 flex-shrink-0" />
+                                    <span>{olderLabel} → {newerLabel}</span>
+                                    <span className="ml-auto italic">No changes</span>
+                                  </div>
+                                )
+                              }
+
+                              return (
+                                <button
+                                  onClick={() => selectComparisonReport(delta.olderTimestamp, delta.newerTimestamp)}
+                                  className={`w-full text-left pl-9 pr-3 py-1.5 border-b border-border/50 transition-colors font-mono text-xs bg-muted/5
+                                    ${isDeltaSelected
+                                      ? 'bg-primary/10 text-foreground border-l-2 border-l-primary'
+                                      : 'hover:bg-muted/30 text-muted-foreground hover:text-foreground'}`}
+                                >
+                                  <div className="flex items-center gap-1.5 text-[10px]">
+                                    <GitCompare className="w-3 h-3 flex-shrink-0 text-foreground/70" />
+                                    <span className="text-foreground">{olderLabel}</span>
+                                    <span className="text-foreground/50">→</span>
+                                    <span className="text-foreground">{newerLabel}</span>
+                                  </div>
+                                  <div className="flex gap-2 mt-0.5 text-[10px] flex-wrap">
+                                    {delta.resolved.length > 0 && (
+                                      <span className="text-[oklch(0.55_0.15_150)]">{delta.resolved.length} resolved</span>
+                                    )}
+                                    {delta.newVulns.length > 0 && (
+                                      <span className="text-[oklch(0.55_0.22_25)]">{delta.newVulns.length} new</span>
+                                    )}
+                                    {delta.persisting.length > 0 && (
+                                      <span className="text-foreground/70">{delta.persisting.length} persisting</span>
+                                    )}
+                                    <span className={`ml-auto flex items-center gap-0.5 font-bold ${
+                                      delta.scoreChange > 0
+                                        ? 'text-[oklch(0.55_0.15_150)]'
+                                        : delta.scoreChange < 0
+                                          ? 'text-[oklch(0.55_0.22_25)]'
+                                          : 'text-muted-foreground'
+                                    }`}>
+                                      {delta.scoreChange > 0
+                                        ? <TrendingUp className="w-3 h-3" />
+                                        : delta.scoreChange < 0
+                                          ? <TrendingDown className="w-3 h-3" />
+                                          : <Minus className="w-3 h-3" />}
+                                      {delta.scoreChange > 0 ? '+' : ''}{delta.scoreChange.toFixed(1)}
+                                    </span>
+                                  </div>
+                                </button>
+                              )
+                            })()}
+                          </div>
                         )
                       })}
-
-                      {/* Comparison entries */}
-                      {chain && chain.deltas.length > 0 && (
-                        <>
-                          <div className="px-7 py-1 border-b border-border/40">
-                            <span className="text-[9px] uppercase tracking-widest text-muted-foreground opacity-60 font-mono">
-                              Comparisons
-                            </span>
-                          </div>
-
-                          {[...chain.deltas].reverse().map((delta) => {
-                            const isSelected =
-                              viewMode === 'comparison' &&
-                              selectedDelta?.olderTimestamp === delta.olderTimestamp &&
-                              selectedDelta?.newerTimestamp === delta.newerTimestamp
-                            const olderLabel = getScanLabel(delta.olderTimestamp)
-                            const newerLabel = getScanLabel(delta.newerTimestamp)
-
-                            if (!delta.hasChanges) {
-                              return (
-                                <div
-                                  key={`${delta.olderTimestamp}-${delta.newerTimestamp}`}
-                                  className="pl-7 pr-3 py-2 border-b border-border/50 font-mono text-[10px]
-                                             text-muted-foreground opacity-40 flex items-center gap-1.5"
-                                >
-                                  <Minus className="w-3 h-3 flex-shrink-0" />
-                                  <span>{olderLabel} → {newerLabel}</span>
-                                  <span className="ml-auto italic">No changes</span>
-                                </div>
-                              )
-                            }
-
-                            return (
-                              <button
-                                key={`${delta.olderTimestamp}-${delta.newerTimestamp}`}
-                                onClick={() => selectComparisonReport(delta.olderTimestamp, delta.newerTimestamp)}
-                                className={`w-full text-left pl-7 pr-3 py-2 border-b border-border/50 transition-colors font-mono text-xs
-                                  ${isSelected
-                                    ? 'bg-primary/10 text-foreground border-l-2 border-l-primary'
-                                    : 'hover:bg-muted/30 text-muted-foreground hover:text-foreground'}`}
-                              >
-                                <div className="flex items-center gap-1.5 text-[10px]">
-                                  <GitCompare className="w-3 h-3 flex-shrink-0 opacity-60" />
-                                  <span className="opacity-80">{olderLabel}</span>
-                                  <span className="opacity-40">→</span>
-                                  <span className="opacity-80">{newerLabel}</span>
-                                </div>
-                                <div className="flex gap-2 mt-0.5 text-[10px] flex-wrap">
-                                  {delta.resolved.length > 0 && (
-                                    <span className="text-[oklch(0.55_0.15_150)]">{delta.resolved.length} resolved</span>
-                                  )}
-                                  {delta.newVulns.length > 0 && (
-                                    <span className="text-[oklch(0.55_0.22_25)]">{delta.newVulns.length} new</span>
-                                  )}
-                                  {delta.persisting.length > 0 && (
-                                    <span className="text-muted-foreground">{delta.persisting.length} persisting</span>
-                                  )}
-                                  <span className={`ml-auto flex items-center gap-0.5 font-bold ${
-                                    delta.scoreChange > 0
-                                      ? 'text-[oklch(0.55_0.15_150)]'
-                                      : delta.scoreChange < 0
-                                        ? 'text-[oklch(0.55_0.22_25)]'
-                                        : 'text-muted-foreground'
-                                  }`}>
-                                    {delta.scoreChange > 0
-                                      ? <TrendingUp className="w-3 h-3" />
-                                      : delta.scoreChange < 0
-                                        ? <TrendingDown className="w-3 h-3" />
-                                        : <Minus className="w-3 h-3" />}
-                                    {delta.scoreChange > 0 ? '+' : ''}{delta.scoreChange.toFixed(1)}
-                                  </span>
-                                </div>
-                              </button>
-                            )
-                          })}
-                        </>
-                      )}
                     </div>
                   )}
                 </div>

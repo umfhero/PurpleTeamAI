@@ -22,6 +22,14 @@ const getSeverityBg = (severity: string) => {
     }
 }
 
+function gradeColor(grade?: string): string {
+    if (!grade) return 'text-muted-foreground'
+    if (grade === 'A+' || grade === 'A') return 'text-[oklch(0.55_0.15_150)]'
+    if (grade === 'B') return 'text-[oklch(0.70_0.15_85)]'
+    if (grade === 'C') return 'text-[oklch(0.65_0.25_45)]'
+    return 'text-[oklch(0.55_0.22_25)]'
+}
+
 // Generate a detailed CVE explanation
 const getCVEExplanation = (vuln: VulnerabilityResult): string | null => {
     if (!vuln.cve) return null
@@ -320,12 +328,12 @@ export default function Dashboard() {
                                                         }`}
                                                 >
                                                     <div className="flex items-center justify-between gap-1">
-                                                        <span className="text-[10px] opacity-60 uppercase tracking-wide">{scanLabel}</span>
+                                                        <span className="text-[10px] text-foreground uppercase tracking-wide">{scanLabel}</span>
                                                         <span className={`text-[10px] font-bold ${gradeColor(scan.securityScore?.grade)}`}>
                                                             {scan.securityScore?.grade ?? '—'}
                                                         </span>
                                                     </div>
-                                                    <div className="text-[10px] opacity-50 mt-0.5 truncate">
+                                                    <div className="text-[10px] text-foreground/70 mt-0.5 truncate">
                                                         {new Date(scan.timestamp).toLocaleString()}
                                                     </div>
                                                     <div className="flex gap-1.5 mt-0.5 text-[10px]">
@@ -394,14 +402,14 @@ export default function Dashboard() {
                                             return (
                                                 <div key={`${delta.olderTimestamp}-${delta.newerTimestamp}`}
                                                     className="px-3 py-2 font-mono text-[10px]">
-                                                    <div className="flex items-center gap-1.5 text-muted-foreground mb-0.5">
-                                                        <span className="opacity-60">{olderLabel}</span>
-                                                        <span className="opacity-40">→</span>
-                                                        <span className="opacity-60">{newerLabel}</span>
+                                                    <div className="flex items-center gap-1.5 text-foreground mb-0.5">
+                                                        <span>{olderLabel}</span>
+                                                        <span className="text-foreground/50">→</span>
+                                                        <span>{newerLabel}</span>
                                                     </div>
 
                                                     {!delta.hasChanges ? (
-                                                        <div className="flex items-center gap-1.5 text-muted-foreground opacity-50">
+                                                        <div className="flex items-center gap-1.5 text-foreground/50">
                                                             <Minus className="w-3 h-3" />
                                                             <span>No changes between these scans</span>
                                                         </div>
@@ -431,7 +439,7 @@ export default function Dashboard() {
                                                                 </span>
                                                             )}
                                                             {delta.persisting.length > 0 && (
-                                                                <span className="text-muted-foreground">
+                                                                <span className="text-foreground/70">
                                                                     {delta.persisting.length} persisting
                                                                 </span>
                                                             )}
