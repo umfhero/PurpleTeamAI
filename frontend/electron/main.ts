@@ -6,6 +6,7 @@ import { runNmapScan, getScanHistory, validateTarget, abortScan, deleteScan } fr
 import { GeminiClient } from './llm'
 import { exportReport } from './reports'
 import { generateHallucinationReport } from './analysis/hallucination-guard'
+import { groupScansByTarget, computeAllDeltas } from './analysis/delta-comparison'
 import type { LLMAnalysisRequest } from './llm'
 import type { ReportOptions } from './reports'
 
@@ -162,6 +163,20 @@ ipcMain.handle('scanner:delete-scan', async (_event, timestamp: string) => {
   return deleteScan(timestamp)
 })
 
+// Get scan history grouped by target URL
+ipcMain.handle('scanner:get-grouped-history', async () => {
+  const history = await getScanHistory()
+  return groupScansByTarget(history)
+})
+
+// Compute all sequential deltas for a given target
+ipcMain.handle('scanner:get-deltas', async (_event, target: string) => {
+  const history = await getScanHistory()
+  const targetScans = history.filter(s => s.target === target)
+  if (targetScans.length < 2) return { target, deltas: [] }
+  return computeAllDeltas(targetScans)
+})
+
 // ============================================
 // IPC Handlers - LLM Analysis
 // ============================================
@@ -301,6 +316,48 @@ ipcMain.handle('report:read-pdf', async (_event, filePath: string) => {
     return { success: true, data: data.toString('base64') }
   } catch (error) {
     console.error('[IPC] Failed to read PDF:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+})
+
+// Generate delta comparison report (auto-save)
+ipcMain.handle('report:generate-delta', async (_event, olderTimestamp: string, newerTimestamp: string) => {
+  console.log(`[IPC] Delta report: ${olderTimestamp} -> ${newerTimestamp}`)
+  try {
+    const history = await getScanHistory()
+    const older = history.find(s => s.timestamp === olderTimestamp)
+    const newer = history.find(s => s.timestamp === newerTimestamp)
+    if (!older || !newer) return { success: false, error: 'Scan data not found' }
+
+    const { computeAllDeltas: _cad, compareScanPair } = await import('./analysis/delta-comparison')
+    const delta = compareScanPair(older, newer)
+    if (!delta.hasChanges) return { success: false, noChanges: true, error: 'No changes between these scans' }
+
+    const { generateDeltaReport } = await import('./reports/delta-report-generator')
+    return generateDeltaReport(delta, older, newer)
+  } catch (error) {
+    console.error('[IPC] Delta report generation error:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+})
+
+// Export delta comparison report via save dialog
+ipcMain.handle('report:export-delta', async (_event, olderTimestamp: string, newerTimestamp: string) => {
+  console.log(`[IPC] Delta report export: ${olderTimestamp} -> ${newerTimestamp}`)
+  try {
+    const history = await getScanHistory()
+    const older = history.find(s => s.timestamp === olderTimestamp)
+    const newer = history.find(s => s.timestamp === newerTimestamp)
+    if (!older || !newer) return { success: false, error: 'Scan data not found' }
+
+    const { compareScanPair } = await import('./analysis/delta-comparison')
+    const delta = compareScanPair(older, newer)
+    if (!delta.hasChanges) return { success: false, noChanges: true, error: 'No changes between these scans' }
+
+    const { exportDeltaReport } = await import('./reports/delta-report-generator')
+    return exportDeltaReport(delta, older, newer)
+  } catch (error) {
+    console.error('[IPC] Delta report export error:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
 })

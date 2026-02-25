@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react'
-import { AlertTriangle, Target, Search, Shield, Zap, ChevronDown, ChevronRight, FileText, Trash2 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { AlertTriangle, Target, Search, Shield, Zap, ChevronDown, ChevronRight, FileText, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import type { NmapScanData, VulnerabilityResult } from '../types/electron.d'
+import type { TargetGroup, ScanDeltaChain } from '../types/delta'
 import SecurityScoreCard from '../components/SecurityScoreCard'
 import OWASPCoverageMatrix from '../components/OWASPCoverageMatrix'
+import NotificationBadge from '../components/NotificationBadge'
 
 type SortField = 'severity' | 'port' | 'service' | 'cve'
 type SortOrder = 'asc' | 'desc'
@@ -66,8 +68,14 @@ const getScanStats = (scan: NmapScanData) => {
 
 export default function Dashboard() {
     const navigate = useNavigate()
-    const [scanHistory, setScanHistory] = useState<NmapScanData[]>([])
+
+    // ── state ──────────────────────────────────────────────────────────────
+    const [targetGroups, setTargetGroups] = useState<TargetGroup[]>([])
+    const [expandedTarget, setExpandedTarget] = useState<string | null>(null)
     const [selectedScan, setSelectedScan] = useState<NmapScanData | null>(null)
+    const [deltaChain, setDeltaChain] = useState<ScanDeltaChain | null>(null)
+    const [loadingDeltas, setLoadingDeltas] = useState(false)
+
     const [sortField, setSortField] = useState<SortField>('severity')
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
     const [searchTerm, setSearchTerm] = useState('')
@@ -78,11 +86,7 @@ export default function Dashboard() {
     const toggleOutput = (vulnId: string) => {
         setExpandedOutputs(prev => {
             const next = new Set(prev)
-            if (next.has(vulnId)) {
-                next.delete(vulnId)
-            } else {
-                next.add(vulnId)
-            }
+            next.has(vulnId) ? next.delete(vulnId) : next.add(vulnId)
             return next
         })
     }
@@ -96,118 +100,99 @@ export default function Dashboard() {
         }
     }, [contextMenu])
 
-    const handleViewReport = () => {
-        if (!selectedScan) return
-        // Navigate to Reports page with the selected scan timestamp
-        navigate('/reports', { state: { scanTimestamp: selectedScan.timestamp } })
-    }
-
-    useEffect(() => {
-        loadScanHistory()
-    }, [])
-
-    const loadScanHistory = async () => {
+    // ── load grouped history ───────────────────────────────────────────────
+    const loadGroups = useCallback(async () => {
         try {
-            if (window.electronAPI) {
-                const scans = await window.electronAPI.scanner.getHistory()
-                // Sort by security score (lower score = worse, should be first)
-                const sortedScans = scans.sort((a, b) => {
-                    const scoreA = a.securityScore?.overall ?? 0
-                    const scoreB = b.securityScore?.overall ?? 0
-                    return scoreA - scoreB // Ascending order (worst first)
-                })
-                setScanHistory(sortedScans)
-                if (sortedScans.length > 0) {
-                    setSelectedScan(sortedScans[0])
+            if (window.electronAPI?.scanner) {
+                const groups = await window.electronAPI.scanner.getGroupedHistory()
+                setTargetGroups(groups)
+
+                if (groups.length > 0) {
+                    const firstGroup = groups[0]
+                    setExpandedTarget(firstGroup.target)
+                    setSelectedScan(firstGroup.scans[0])
+                    loadDeltaChain(firstGroup.target)
                 }
-            } else {
-                // Development fallback with demo data
-                const mockScan: NmapScanData = {
-                    target: 'testphp.vulnweb.com',
-                    timestamp: new Date().toISOString(),
-                    scanType: 'nmap-vuln',
-                    ports: [
-                        { port: 80, protocol: 'tcp', state: 'open', service: 'http', version: 'Apache/2.4.49' },
-                        { port: 443, protocol: 'tcp', state: 'open', service: 'https', version: 'Apache/2.4.49' },
-                    ],
-                    vulnerabilities: [
-                        {
-                            id: 'demo-1',
-                            cve: 'CVE-2021-41773',
-                            title: 'Apache Path Traversal',
-                            description: 'Path traversal vulnerability in Apache HTTP Server 2.4.49-2.4.50 allows attackers to access files outside the document root',
-                            severity: 'critical',
-                            port: 80,
-                            service: 'Apache HTTP Server 2.4.49',
-                        },
-                        {
-                            id: 'demo-2',
-                            cve: 'CVE-2017-9798',
-                            title: 'Apache Optionsbleed',
-                            description: 'Memory leak in Apache HTTP Server allows remote attackers to read portions of memory via crafted OPTIONS requests',
-                            severity: 'high',
-                            port: 80,
-                            service: 'Apache HTTP Server',
-                        },
-                        {
-                            id: 'demo-3',
-                            title: 'SSL Certificate Issue',
-                            description: 'The SSL certificate configuration may allow weaker cipher suites',
-                            severity: 'medium',
-                            port: 443,
-                            service: 'https',
-                        },
-                    ],
-                }
-                setScanHistory([mockScan])
-                setSelectedScan(mockScan)
             }
         } catch (error) {
-            console.error('Failed to load scan history:', error)
+            console.error('Failed to load grouped scan history:', error)
         } finally {
             setLoading(false)
         }
+    }, [])
+
+    useEffect(() => { loadGroups() }, [loadGroups])
+
+    const loadDeltaChain = async (target: string) => {
+        if (!window.electronAPI?.scanner) return
+        setLoadingDeltas(true)
+        try {
+            const chain = await window.electronAPI.scanner.getDeltas(target)
+            setDeltaChain(chain)
+        } catch (err) {
+            console.error('Failed to load deltas:', err)
+        } finally {
+            setLoadingDeltas(false)
+        }
     }
 
-    const handleContextMenu = (e: React.MouseEvent, scan: NmapScanData) => {
-        e.preventDefault()
-        setContextMenu({ x: e.clientX, y: e.clientY, scan })
+    // ── group expand / scan select ─────────────────────────────────────────
+    const handleGroupClick = (target: string) => {
+        if (expandedTarget === target) {
+            setExpandedTarget(null)
+        } else {
+            setExpandedTarget(target)
+            const group = targetGroups.find(g => g.target === target)
+            if (group) {
+                setSelectedScan(group.scans[0])
+                loadDeltaChain(target)
+            }
+        }
     }
 
+    const handleScanClick = (scan: NmapScanData) => {
+        setSelectedScan(scan)
+    }
+
+    const handleViewReport = () => {
+        if (!selectedScan) return
+        navigate('/reports', { state: { scanTimestamp: selectedScan.timestamp } })
+    }
+
+    // ── delete ─────────────────────────────────────────────────────────────
     const handleDeleteScan = async (scan: NmapScanData) => {
         if (!window.electronAPI?.scanner) return
-
         try {
             await window.electronAPI.scanner.deleteScan(scan.timestamp)
-
-            // Update local state
-            const updatedScans = scanHistory.filter(s => s.timestamp !== scan.timestamp)
-            setScanHistory(updatedScans)
-
-            // If deleted scan was selected, select another one
-            if (selectedScan?.timestamp === scan.timestamp) {
-                setSelectedScan(updatedScans.length > 0 ? updatedScans[0] : null)
-            }
-
             setContextMenu(null)
+            const groups = await window.electronAPI.scanner.getGroupedHistory()
+            setTargetGroups(groups)
+
+            if (selectedScan?.timestamp === scan.timestamp) {
+                const group = groups.find(g => g.target === scan.target)
+                if (group && group.scans.length > 0) {
+                    setSelectedScan(group.scans[0])
+                } else {
+                    setSelectedScan(groups[0]?.scans[0] ?? null)
+                    if (groups.length > 0) setExpandedTarget(groups[0].target)
+                }
+                const newTarget = groups.find(g => g.target === scan.target) ? scan.target : groups[0]?.target
+                if (newTarget) loadDeltaChain(newTarget)
+            }
         } catch (error) {
             console.error('Failed to delete scan:', error)
         }
     }
 
+    // ── sort / filter ──────────────────────────────────────────────────────
     const handleSort = (field: SortField) => {
-        if (sortField === field) {
-            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-        } else {
-            setSortField(field)
-            setSortOrder('asc')
-        }
+        if (sortField === field) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+        else { setSortField(field); setSortOrder('asc') }
     }
+    void handleSort
 
     const getSortedVulnerabilities = () => {
         if (!selectedScan) return []
-
-        // Filter out negative/empty results ("couldn't find any", "not vulnerable", etc.)
         const negativeIndicators = [
             "couldn't find", "could not find", "not found",
             "no vulnerabilities", "not vulnerable", "not affected",
@@ -215,11 +200,9 @@ export default function Dashboard() {
             "no issues found", "no matches found", "no results",
         ]
         const filtered = selectedScan.vulnerabilities.filter(vuln => {
-            // Exclude negative/empty scan results
             const outputLower = (vuln.output || vuln.description || '').toLowerCase()
             const isNegative = negativeIndicators.some(phrase => outputLower.includes(phrase))
             if (isNegative && outputLower.length < 200) return false
-
             if (!searchTerm) return true
             const term = searchTerm.toLowerCase()
             return (
@@ -229,43 +212,26 @@ export default function Dashboard() {
                 vuln.service?.toLowerCase().includes(term)
             )
         })
-
         return filtered.sort((a, b) => {
             let aVal: string | number, bVal: string | number
-
             switch (sortField) {
-                case 'severity':
-                    aVal = severityOrder[a.severity]
-                    bVal = severityOrder[b.severity]
-                    break
-                case 'port':
-                    aVal = a.port || 0
-                    bVal = b.port || 0
-                    break
-                case 'service':
-                    aVal = a.service || ''
-                    bVal = b.service || ''
-                    break
-                case 'cve':
-                    aVal = a.cve || ''
-                    bVal = b.cve || ''
-                    break
+                case 'severity': aVal = severityOrder[a.severity]; bVal = severityOrder[b.severity]; break
+                case 'port': aVal = a.port || 0; bVal = b.port || 0; break
+                case 'service': aVal = a.service || ''; bVal = b.service || ''; break
+                case 'cve': aVal = a.cve || ''; bVal = b.cve || ''; break
             }
-
             if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1
             if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1
             return 0
         })
     }
 
-    // Suppress unused variable warning
-    void handleSort
-
+    // ── loading / empty ────────────────────────────────────────────────────
     if (loading) {
         return <div className="flex items-center justify-center h-full text-muted-foreground font-mono">Loading scans...</div>
     }
 
-    if (scanHistory.length === 0) {
+    if (targetGroups.length === 0) {
         return (
             <div className="flex items-center justify-center h-full">
                 <div className="text-center">
@@ -278,10 +244,11 @@ export default function Dashboard() {
 
     const sortedVulns = getSortedVulnerabilities()
     const currentStats = selectedScan ? getScanStats(selectedScan) : null
+    const selectedGroup = targetGroups.find(g => g.target === selectedScan?.target)
 
     return (
         <div className="flex h-full">
-            {/* Scan History Sidebar - flush to edge */}
+            {/* ── Sidebar ─────────────────────────────────────────────────── */}
             <aside className="w-56 flex flex-col border-r border-border bg-card">
                 <div className="px-3 py-2 border-b border-border flex items-center justify-between">
                     <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Scan History</h3>
@@ -295,56 +262,101 @@ export default function Dashboard() {
                         <FileText className="w-4 h-4" />
                     </button>
                 </div>
+
                 <div className="flex-1 overflow-auto">
-                    {scanHistory.map((scan) => {
-                        const stats = getScanStats(scan)
+                    {targetGroups.map((group) => {
+                        const isExpanded = expandedTarget === group.target
+                        const latestScan = group.scans[0]
+
                         return (
-                            <button
-                                key={scan.timestamp}
-                                onClick={() => setSelectedScan(scan)}
-                                onContextMenu={(e) => handleContextMenu(e, scan)}
-                                className={`w-full text-left px-3 py-2 border-b border-border transition-colors font-mono text-xs ${selectedScan?.timestamp === scan.timestamp
-                                        ? 'bg-primary/10 text-foreground'
-                                        : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                                    }`}
-                            >
-                                <div className="font-semibold truncate text-sm">{scan.target}</div>
-                                <div className="text-[10px] mt-0.5 opacity-60">{new Date(scan.timestamp).toLocaleString()}</div>
-                                {/* Compact stats row */}
-                                <div className="flex gap-2 mt-1 text-[10px]">
-                                    {stats.critical > 0 && (
-                                        <span className="text-[oklch(0.55_0.22_25)]">C:{stats.critical}</span>
-                                    )}
-                                    {stats.high > 0 && (
-                                        <span className="text-[oklch(0.65_0.25_45)]">H:{stats.high}</span>
-                                    )}
-                                    {stats.medium > 0 && (
-                                        <span className="text-[oklch(0.70_0.15_85)]">M:{stats.medium}</span>
-                                    )}
-                                    {stats.low > 0 && (
-                                        <span className="text-[oklch(0.55_0.15_150)]">L:{stats.low}</span>
-                                    )}
-                                    <span className="text-muted-foreground">P:{stats.ports}</span>
-                                </div>
-                            </button>
+                            <div key={group.target} className="border-b border-border">
+                                {/* ── Group header ── */}
+                                <button
+                                    onClick={() => handleGroupClick(group.target)}
+                                    className={`w-full text-left px-3 py-2.5 transition-colors font-mono
+                                                flex items-start gap-1.5
+                                                ${isExpanded ? 'bg-muted/40 text-foreground' : 'hover:bg-muted/20 text-muted-foreground hover:text-foreground'}`}
+                                >
+                                    <span className="mt-0.5 flex-shrink-0 text-muted-foreground">
+                                        {isExpanded
+                                            ? <ChevronDown className="w-3 h-3" />
+                                            : <ChevronRight className="w-3 h-3" />}
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="font-semibold text-sm truncate flex-1">{group.target}</span>
+                                            <NotificationBadge count={group.count} />
+                                        </div>
+                                        {latestScan && (
+                                            <div className="text-[10px] mt-0.5 flex gap-1.5 opacity-70">
+                                                <span className={gradeColor(group.latestGrade)}>{group.latestGrade ?? '—'}</span>
+                                                <span>·</span>
+                                                <span>{new Date(latestScan.timestamp).toLocaleDateString()}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </button>
+
+                                {/* ── Expanded: individual scans ── */}
+                                {isExpanded && (
+                                    <div className="bg-muted/10">
+                                        {group.scans.map((scan, idx) => {
+                                            const stats = getScanStats(scan)
+                                            const isSelected = selectedScan?.timestamp === scan.timestamp
+                                            const scanLabel = idx === 0 ? 'Latest' : `Scan ${group.count - idx}`
+
+                                            return (
+                                                <button
+                                                    key={scan.timestamp}
+                                                    onClick={() => handleScanClick(scan)}
+                                                    onContextMenu={(e) => {
+                                                        e.preventDefault()
+                                                        setContextMenu({ x: e.clientX, y: e.clientY, scan })
+                                                    }}
+                                                    className={`w-full text-left pl-7 pr-3 py-2 border-b border-border/50 transition-colors font-mono text-xs
+                                                        ${isSelected
+                                                            ? 'bg-primary/10 text-foreground border-l-2 border-l-primary'
+                                                            : 'hover:bg-muted/30 text-muted-foreground hover:text-foreground'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <span className="text-[10px] opacity-60 uppercase tracking-wide">{scanLabel}</span>
+                                                        <span className={`text-[10px] font-bold ${gradeColor(scan.securityScore?.grade)}`}>
+                                                            {scan.securityScore?.grade ?? '—'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-[10px] opacity-50 mt-0.5 truncate">
+                                                        {new Date(scan.timestamp).toLocaleString()}
+                                                    </div>
+                                                    <div className="flex gap-1.5 mt-0.5 text-[10px]">
+                                                        {stats.critical > 0 && <span className="text-[oklch(0.55_0.22_25)]">C:{stats.critical}</span>}
+                                                        {stats.high > 0 && <span className="text-[oklch(0.65_0.25_45)]">H:{stats.high}</span>}
+                                                        {stats.medium > 0 && <span className="text-[oklch(0.70_0.15_85)]">M:{stats.medium}</span>}
+                                                        {stats.low > 0 && <span className="text-[oklch(0.55_0.15_150)]">L:{stats.low}</span>}
+                                                        <span className="text-muted-foreground">P:{stats.ports}</span>
+                                                    </div>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+                            </div>
                         )
                     })}
                 </div>
             </aside>
 
-            {/* Main Content - Split: Left (Score+OWASP) | Right (Vulns) */}
+            {/* ── Main Content ─────────────────────────────────────────────── */}
             <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="flex-1 flex overflow-hidden">
-                    {/* Left Panel: Security Score + OWASP - flexible width */}
+                    {/* Left Panel: Score + OWASP + Scan Progression */}
                     <div className="flex-1 flex flex-col border-r border-border overflow-y-auto overflow-x-hidden min-w-[300px] max-w-[50%]">
-                        {/* Security Score */}
                         {selectedScan?.securityScore && (
                             <div className="border-b border-border">
                                 <SecurityScoreCard score={selectedScan.securityScore} />
                             </div>
                         )}
 
-                        {/* OWASP Coverage */}
                         {selectedScan?.owaspCoverage && selectedScan?.owaspDistribution && (
                             <div className="flex-1 border-b border-border">
                                 <OWASPCoverageMatrix
@@ -353,10 +365,101 @@ export default function Dashboard() {
                                 />
                             </div>
                         )}
+
+                        {/* ── Scan Progression ── */}
+                        {selectedGroup && selectedGroup.count > 1 && (
+                            <div className="border-b border-border">
+                                <div className="px-3 py-2 border-b border-border/60 flex items-center gap-2">
+                                    <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
+                                    <h4 className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                                        Scan Progression
+                                    </h4>
+                                    <span className="text-[9px] text-muted-foreground opacity-60 ml-auto">
+                                        {selectedGroup.count} scans
+                                    </span>
+                                </div>
+
+                                {loadingDeltas ? (
+                                    <div className="px-3 py-3 text-[10px] font-mono text-muted-foreground">
+                                        Computing deltas...
+                                    </div>
+                                ) : deltaChain && deltaChain.deltas.length > 0 ? (
+                                    <div className="divide-y divide-border/50">
+                                        {[...deltaChain.deltas].reverse().map((delta) => {
+                                            const olderIdx = selectedGroup.scans.findIndex(s => s.timestamp === delta.olderTimestamp)
+                                            const newerIdx = selectedGroup.scans.findIndex(s => s.timestamp === delta.newerTimestamp)
+                                            const olderLabel = olderIdx === 0 ? 'Latest' : `Scan ${selectedGroup.count - olderIdx}`
+                                            const newerLabel = newerIdx === 0 ? 'Latest' : `Scan ${selectedGroup.count - newerIdx}`
+
+                                            return (
+                                                <div key={`${delta.olderTimestamp}-${delta.newerTimestamp}`}
+                                                    className="px-3 py-2 font-mono text-[10px]">
+                                                    <div className="flex items-center gap-1.5 text-muted-foreground mb-0.5">
+                                                        <span className="opacity-60">{olderLabel}</span>
+                                                        <span className="opacity-40">→</span>
+                                                        <span className="opacity-60">{newerLabel}</span>
+                                                    </div>
+
+                                                    {!delta.hasChanges ? (
+                                                        <div className="flex items-center gap-1.5 text-muted-foreground opacity-50">
+                                                            <Minus className="w-3 h-3" />
+                                                            <span>No changes between these scans</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-3 flex-wrap">
+                                                            <span className={`flex items-center gap-0.5 font-bold ${delta.scoreChange > 0
+                                                                ? 'text-[oklch(0.55_0.15_150)]'
+                                                                : delta.scoreChange < 0
+                                                                    ? 'text-[oklch(0.55_0.22_25)]'
+                                                                    : 'text-muted-foreground'
+                                                                }`}>
+                                                                {delta.scoreChange > 0
+                                                                    ? <TrendingUp className="w-3 h-3" />
+                                                                    : delta.scoreChange < 0
+                                                                        ? <TrendingDown className="w-3 h-3" />
+                                                                        : <Minus className="w-3 h-3" />}
+                                                                {delta.scoreChange > 0 ? '+' : ''}{delta.scoreChange.toFixed(1)}
+                                                            </span>
+                                                            {delta.resolved.length > 0 && (
+                                                                <span className="text-[oklch(0.55_0.15_150)]">
+                                                                    {delta.resolved.length} resolved
+                                                                </span>
+                                                            )}
+                                                            {delta.newVulns.length > 0 && (
+                                                                <span className="text-[oklch(0.55_0.22_25)]">
+                                                                    {delta.newVulns.length} new
+                                                                </span>
+                                                            )}
+                                                            {delta.persisting.length > 0 && (
+                                                                <span className="text-muted-foreground">
+                                                                    {delta.persisting.length} persisting
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="px-3 py-3 text-[10px] font-mono text-muted-foreground opacity-50">
+                                        Need at least 2 scans to show progression.
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Right Panel: Vulnerabilities List */}
                     <div className="flex-1 flex flex-col overflow-hidden min-w-[300px]">
+                        {selectedScan && (
+                            <div className="px-4 py-1.5 border-b border-border bg-muted/10 flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
+                                <span className="truncate font-semibold text-foreground">{selectedScan.target}</span>
+                                <span className="opacity-50">·</span>
+                                <span className="opacity-70">{new Date(selectedScan.timestamp).toLocaleString()}</span>
+                            </div>
+                        )}
+
                         {/* Search */}
                         <div className="px-4 py-2 border-b border-border">
                             <div className="relative">
@@ -387,7 +490,6 @@ export default function Dashboard() {
 
                                         return (
                                             <div key={vuln.id} className="p-4 hover:bg-muted/50">
-                                                {/* Header Row */}
                                                 <div className="flex items-start gap-3">
                                                     <span className={`inline-block px-2 py-0.5 text-[10px] uppercase font-bold ${getSeverityBg(vuln.severity)} text-background`}>
                                                         {vuln.severity}
@@ -395,9 +497,7 @@ export default function Dashboard() {
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 flex-wrap">
                                                             <span className="font-mono font-semibold text-sm">{vuln.title}</span>
-                                                            {vuln.cve && (
-                                                                <span className="text-xs font-mono text-primary">{vuln.cve}</span>
-                                                            )}
+                                                            {vuln.cve && <span className="text-xs font-mono text-primary">{vuln.cve}</span>}
                                                         </div>
                                                         <div className="text-xs text-muted-foreground mt-0.5 font-mono">
                                                             Port {vuln.port || '-'} • {vuln.service || 'Unknown service'}
@@ -405,30 +505,19 @@ export default function Dashboard() {
                                                     </div>
                                                 </div>
 
-                                                {/* CVE Explanation - prominent at glance */}
                                                 {cveExplanation && (
-                                                    <div className="mt-2 text-xs font-mono text-primary/90 italic">
-                                                        {cveExplanation}
-                                                    </div>
+                                                    <div className="mt-2 text-xs font-mono text-primary/90 italic">{cveExplanation}</div>
                                                 )}
 
-                                                {/* Description - shorter line */}
-                                                <div className="mt-2 text-xs font-mono text-foreground/70 line-clamp-2">
-                                                    {vuln.description}
-                                                </div>
+                                                <div className="mt-2 text-xs font-mono text-foreground/70 line-clamp-2">{vuln.description}</div>
 
-                                                {/* Collapsible Raw Output */}
                                                 {vuln.output && (
                                                     <div className="mt-3">
                                                         <button
                                                             onClick={() => toggleOutput(vuln.id)}
                                                             className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
                                                         >
-                                                            {isOutputExpanded ? (
-                                                                <ChevronDown className="w-3 h-3" />
-                                                            ) : (
-                                                                <ChevronRight className="w-3 h-3" />
-                                                            )}
+                                                            {isOutputExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                                                             Raw Output
                                                         </button>
                                                         {isOutputExpanded && (
@@ -439,16 +528,13 @@ export default function Dashboard() {
                                                     </div>
                                                 )}
 
-                                                {/* AI Analysis */}
                                                 {analysis && (
                                                     <div className="mt-4 pt-3 border-t border-border space-y-2">
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">AI Analysis</span>
                                                             <span className="text-[10px] text-muted-foreground">({(analysis.confidenceScore * 100).toFixed(0)}% confidence)</span>
                                                         </div>
-
                                                         <p className="text-xs font-mono text-foreground/80">{analysis.plainEnglishSummary}</p>
-
                                                         {analysis.affectedEndpoints.length > 0 && (
                                                             <div>
                                                                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Affected Endpoints</div>
@@ -459,7 +545,6 @@ export default function Dashboard() {
                                                                 </ul>
                                                             </div>
                                                         )}
-
                                                         <div>
                                                             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Remediation</div>
                                                             <ol className="mt-1 text-xs font-mono list-decimal list-inside text-foreground/70 space-y-0.5">
@@ -468,7 +553,6 @@ export default function Dashboard() {
                                                                 ))}
                                                             </ol>
                                                         </div>
-
                                                         {analysis.owaspCategory && (
                                                             <div className="flex items-center gap-2 text-xs">
                                                                 <span className="text-muted-foreground">OWASP:</span>
@@ -486,7 +570,7 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Stats Bar - Fixed to bottom */}
+                {/* Stats Bar */}
                 {currentStats && (
                     <div className="px-4 py-2 flex flex-wrap gap-4 text-xs font-mono border-t border-border bg-card">
                         <div className="flex items-center gap-1.5">
@@ -508,7 +592,6 @@ export default function Dashboard() {
                             <Target className="w-3.5 h-3.5 text-muted-foreground" />
                             <span className="text-muted-foreground">Ports:</span>
                             <span className="font-semibold">{currentStats.ports}</span>
-                            {/* Port details tooltip */}
                             {currentStats.portDetails.length > 0 && (
                                 <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-card border border-border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 whitespace-nowrap">
                                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Open Ports</div>
@@ -522,7 +605,7 @@ export default function Dashboard() {
                 )}
             </div>
 
-            {/* Custom Context Menu */}
+            {/* Context Menu */}
             {contextMenu && (
                 <div
                     className="fixed bg-card border border-border shadow-lg z-50 min-w-[160px]"
@@ -542,3 +625,4 @@ export default function Dashboard() {
         </div>
     )
 }
+

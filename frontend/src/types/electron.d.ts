@@ -164,6 +164,7 @@ export interface ReportResult {
   success: boolean
   filePath?: string
   reportId?: string
+  noChanges?: boolean
   error?: string
 }
 
@@ -179,10 +180,46 @@ export interface ReportMetadata {
   grade?: string
 }
 
+// Delta Comparison types
+export interface OWASPDeltaEntry {
+  category: OWASPCategory
+  oldCount: number
+  newCount: number
+  change: number
+}
+
+export interface ScanDelta {
+  olderTimestamp: string
+  newerTimestamp: string
+  olderScore: number
+  newerScore: number
+  scoreChange: number
+  resolved: VulnerabilityResult[]
+  newVulns: VulnerabilityResult[]
+  persisting: VulnerabilityResult[]
+  owaspDelta: OWASPDeltaEntry[]
+  hasChanges: boolean
+}
+
+export interface ScanDeltaChain {
+  target: string
+  deltas: ScanDelta[]
+}
+
+export interface TargetGroup {
+  target: string
+  scans: NmapScanData[]
+  count: number
+  latestScore?: number
+  latestGrade?: string
+}
+
 export interface ElectronAPI {
   scanner: {
     runNmap: (options: ScanOptions) => Promise<ScanResult>
     getHistory: () => Promise<NmapScanData[]>
+    getGroupedHistory: () => Promise<TargetGroup[]>
+    getDeltas: (target: string) => Promise<ScanDeltaChain>
     validateTarget: (target: string) => Promise<ValidationResult>
     abort: () => Promise<{ success: boolean; message: string }>
     deleteScan: (timestamp: string) => Promise<{ success: boolean; message?: string }>
@@ -196,6 +233,8 @@ export interface ElectronAPI {
     export: (options: ReportOptions) => Promise<ReportResult>
     exportPentest: (scan: NmapScanData) => Promise<ReportResult>
     generatePentest: (scan: NmapScanData) => Promise<ReportResult>
+    generateDelta: (olderTs: string, newerTs: string) => Promise<ReportResult>
+    exportDelta: (olderTs: string, newerTs: string) => Promise<ReportResult>
     getHistory: () => Promise<ReportMetadata[]>
     open: (id: string) => Promise<boolean>
     openFile: (filePath: string) => Promise<boolean>
