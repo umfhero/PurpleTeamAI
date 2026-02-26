@@ -55,20 +55,25 @@ Orchestrates Nmap and converts its output into usable data.
 - **Target allowlist** — `allowed-targets.json` restricts scanning to approved targets only (testphp.vulnweb.com, localhost, 127.0.0.1, ::1)
 - **Abort support** — running scan can be killed mid-execution
 - **Scan history** — JSON files persisted in `data/scans/` with ISO timestamps
+- **Target normalisation** — `normalizeTarget()` strips URL schemes (`http://`, `https://`), paths, and query strings, extracting a bare hostname for Nmap. Explicit ports in the URL (e.g. `localhost:8080`) are extracted and passed as `-p {port},1-1000` to ensure coverage
+- **Windows localhost support** — Nmap's default SYN scan (`-sS`) fails on the Windows loopback adapter. When the target resolves to localhost/127.0.0.1/::1 on Windows, the scanner automatically switches to TCP connect scan (`-sT`)
+- **Grouped scan history** — `groupScansByTarget()` groups all saved scans by normalised target URL, returning newest-first ordering with latest score and grade for sidebar display
 
 ---
 
 ### 2. Analysis Module — `electron/analysis/`
 
-Pure computation — no external calls. Categorises and scores scan results deterministically.
+Pure computation — no external calls. Categorises, scores, and compares scan results deterministically.
 
-| File                     | Role                                                                                                                        |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `owasp-types.ts`         | Enum of 10 OWASP categories (A01–A10), each with name, description, keyword list, and CVE patterns                          |
-| `owasp-mapper.ts`        | Maps each vulnerability to OWASP categories via keyword matching across title, description, CVE, service, and output fields |
-| `security-scorer.ts`     | Calculates 0-100 security score with grade, confidence level, breakdown, and recommendations                                |
-| `hallucination-guard.ts` | Cross-validates AI output against deterministic scan data; flags potential hallucinations                                   |
-| `index.ts`               | Barrel export                                                                                                               |
+| File                     | Role                                                                                                                                          |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `owasp-types.ts`         | Enum of 10 OWASP categories (A01–A10), each with name, description, keyword list, and CVE patterns                                            |
+| `owasp-mapper.ts`        | Maps each vulnerability to OWASP categories via keyword matching across title, description, CVE, service, and output fields                   |
+| `security-scorer.ts`     | Calculates 0-100 security score with grade, confidence level, breakdown, and recommendations                                                  |
+| `hallucination-guard.ts` | Cross-validates AI output against deterministic scan data; flags potential hallucinations                                                     |
+| `delta-types.ts`         | Type definitions for the delta comparison system: `ScanDelta`, `ScanDeltaChain`, `TargetGroup`, `OWASPDeltaEntry`, `VulnerabilityFingerprint` |
+| `delta-comparison.ts`    | Delta comparison engine — computes resolved/new/persisting vulns between sequential scans of the same target                                  |
+| `index.ts`               | Barrel export                                                                                                                                 |
 
 **OWASP Mapping features:**
 
@@ -86,6 +91,15 @@ Pure computation — no external calls. Categorises and scores scan results dete
 - **Separate confidence calculation** — high score with low confidence means "scanner couldn't find much", not "target is secure"
 - **Confidence logic** — no open ports = low; web services + zero vulns = low (scanner likely missed things); ≥5 vulns = high
 - **Contextual recommendations** — generated based on vuln counts, OWASP coverage width, and scan confidence
+
+**Delta Comparison features:**
+
+- **Vulnerability fingerprinting** — generates stable identity keys for vulnerabilities across scans using CVE + port (preferred) or script + title + port (fallback). This ensures the same finding in two different scans is recognised as the same vulnerability even though counter-based IDs differ
+- **Three-way classification** — each vulnerability is classified as _resolved_ (in older scan only), _new_ (in newer scan only), or _persisting_ (in both scans)
+- **Score change tracking** — calculates the difference in security score between the two scans with directional labelling (improved/degraded/unchanged)
+- **OWASP coverage delta** — computes per-category change in vulnerability count across the OWASP Top 10 between the two scans. Negative values indicate remediation progress; positive values indicate regressions
+- **Delta chain computation** — `computeAllDeltas()` takes a list of scans for one target and produces a chain of pairwise comparisons (each consecutive pair), enabling lifecycle tracking across multiple assessment cycles
+- **Target grouping** — `groupScansByTarget()` aggregates all saved scans by target URL, sorted newest-first, with latest score/grade metadata for the sidebar
 
 ---
 
@@ -147,40 +161,57 @@ The app has multiple layers designed to detect and mitigate AI hallucinations (f
 
 Generates professional PDF reports from the combined pipeline output.
 
-| File                   | Role                                                                               |
-| ---------------------- | ---------------------------------------------------------------------------------- |
-| `generator.ts`         | Dark-themed security assessment report (internal review style)                     |
-| `pentest-generator.ts` | Professional pentest-style report (light-themed, printable, with cover page + ToC) |
-| `types.ts`             | `ReportOptions`, `ReportResult`, `ReportMetadata`                                  |
-| `index.ts`             | Barrel export                                                                      |
+| File                        | Role                                                                                                      |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `generator.ts`              | Dark-themed security assessment report (internal review style)                                            |
+| `pentest-generator.ts`      | Professional pentest-style report (light-themed, printable, with cover page + ToC)                        |
+| `delta-report-generator.ts` | Scan comparison (delta) report — professional LaTeX-styled PDF comparing two sequential scans of a target |
+| `types.ts`                  | `ReportOptions`, `ReportResult`, `ReportMetadata`                                                         |
+| `index.ts`                  | Barrel export                                                                                             |
 
 **Key features:**
 
-- **Two report styles** — assessment (dark, compact, internal) and pentest (light, professional, client-facing with cover page, table of contents, executive summary)
+- **Three report styles** — assessment (dark, compact, internal), pentest (light, professional, client-facing with cover page, table of contents, executive summary), and delta comparison (professional, light-themed, comparing two sequential scans)
 - **AI analysis inline** — each vulnerability listing includes the LLM's plain-English summary and remediation steps
 - **OWASP coverage grid** — visual matrix showing which Top 10 categories were affected
 - **Prioritised remediation** — findings sorted by severity (critical first) with step-by-step fixes
 - **Export via system dialog** — user picks save location; report opens in default browser
-- **Auto-save** — pentest reports also auto-save to `data/reports/` with structured filenames
+- **Auto-save** — pentest reports and delta reports auto-save to `data/reports/` with structured filenames
+- **Report caching** — generated delta PDFs are cached on disk; subsequent views return the cached copy without regeneration
 - **Report metadata** — persisted to `data/reports/metadata.json` for history/retrieval
+
+**Delta Comparison Report structure:**
+
+The delta report is a 7-section, multi-page PDF generated from `generateDeltaReportHTML()` with consistent LaTeX-academic styling matching the main pentest report (Palatino Linotype serif body, Segoe UI sans-serif labels, muted pastel severity badges, white background, small-caps section headers):
+
+1. **Cover page** — target name, score change summary, baseline/latest dates, double-border professional framing
+2. **Table of Contents** — numbered sections with small-caps headings
+3. **Executive Summary** — narrative overview with key findings info-box, summary table (resolved/new/persisting counts with severity breakdowns)
+4. **Score Comparison** — side-by-side baseline vs latest metrics table with directional commentary
+5. **Resolved Vulnerabilities** — findings table + detailed finding cards for vulnerabilities no longer detected
+6. **New Vulnerabilities** — findings table + detailed finding cards for newly introduced findings
+7. **Persisting Vulnerabilities** — findings table + detailed finding cards for unaddressed findings
+8. **OWASP Top 10 Coverage Delta** — per-category table showing count changes (conditional, only shown if OWASP data exists)
+9. **Conclusion** — auto-generated narrative based on score direction and remaining findings
 
 ---
 
 ## Frontend (UI) — `src/`
 
-| File / Folder                        | Role                                                                                                   |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `App.tsx`                            | React Router: `/scan`, `/dashboard`, `/reports`                                                        |
-| `pages/ScanTarget.tsx`               | Target input, validation, 6-step progress stepper, live terminal, scan lifecycle                       |
-| `pages/Dashboard.tsx`                | Scan history sidebar, vulnerability table (search/sort), score card, OWASP matrix, AI analysis display |
-| `pages/Reports.tsx`                  | Scan selector, report generation, preview, export actions                                              |
-| `components/Layout.tsx`              | App shell — collapsible sidebar nav, header, status indicator                                          |
-| `components/SecurityScoreCard.tsx`   | Score circle (0-100), letter grade, confidence, breakdown, recommendations                             |
-| `components/OWASPCoverageMatrix.tsx` | 5×2 grid of OWASP categories with hit counts and tooltips                                              |
-| `components/ReportViewer.tsx`        | In-app report renderer with score, OWASP grid, ports, vulns with AI inline                             |
-| `lib/scanStore.ts`                   | Global singleton state store (in-memory, persists across page navigation)                              |
-| `lib/useScanStore.ts`                | React hook wrapping scanStore with useState/useEffect subscription                                     |
-| `types/electron.d.ts`                | TypeScript declarations for entire `window.electronAPI` interface                                      |
+| File / Folder                        | Role                                                                                                                                   |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `App.tsx`                            | React Router: `/scan`, `/dashboard`, `/reports`                                                                                        |
+| `pages/ScanTarget.tsx`               | Target input, validation, 6-step progress stepper, live terminal, scan lifecycle                                                       |
+| `pages/Dashboard.tsx`                | Scan history sidebar, vulnerability table (search/sort), score card, OWASP matrix, AI analysis display, delta comparison summary cards |
+| `pages/Reports.tsx`                  | Target-grouped sidebar with interleaved scan entries and inline comparison links, report generation, PDF preview, export               |
+| `components/Layout.tsx`              | App shell — collapsible sidebar nav, header, status indicator                                                                          |
+| `components/SecurityScoreCard.tsx`   | Score circle (0-100), letter grade, confidence, breakdown, recommendations                                                             |
+| `components/OWASPCoverageMatrix.tsx` | 5×2 grid of OWASP categories with hit counts and tooltips                                                                              |
+| `components/ReportViewer.tsx`        | In-app report renderer with score, OWASP grid, ports, vulns with AI inline                                                             |
+| `lib/scanStore.ts`                   | Global singleton state store (in-memory, persists across page navigation)                                                              |
+| `lib/useScanStore.ts`                | React hook wrapping scanStore with useState/useEffect subscription                                                                     |
+| `types/electron.d.ts`                | TypeScript declarations for entire `window.electronAPI` interface                                                                      |
+| `types/delta.ts`                     | Frontend mirror of delta types: `ScanDelta`, `ScanDeltaChain`, `TargetGroup`, `OWASPDeltaEntry`                                        |
 
 ---
 
@@ -190,36 +221,41 @@ All communication between frontend and backend goes through `contextBridge.expos
 
 **Security model:** `contextIsolation: true`, `nodeIntegration: false` — the UI cannot access the file system or run programs directly. Only pre-approved IPC channels are exposed.
 
-| Channel                       | Direction    | Purpose                 |
-| ----------------------------- | ------------ | ----------------------- |
-| `scanner:run-nmap`            | UI → Backend | Start a scan            |
-| `scanner:validate-target`     | UI → Backend | Check allowlist         |
-| `scanner:get-history`         | UI → Backend | Load past scans         |
-| `scanner:abort`               | UI → Backend | Kill running scan       |
-| `scanner:delete-scan`         | UI → Backend | Remove saved scan       |
-| `scanner:progress`            | Backend → UI | Live scan output lines  |
-| `scanner:phase-result`        | Backend → UI | Phase 1 early results   |
-| `llm:analyze-vulnerabilities` | UI → Backend | Send vulns to Gemini AI |
-| `report:export`               | UI → Backend | Save assessment report  |
-| `report:export-pentest`       | UI → Backend | Save pentest report     |
-| `report:generate-pentest`     | UI → Backend | Generate pentest report |
-| `report:get-history`          | UI → Backend | Load past reports       |
-| `report:open`                 | UI → Backend | Open saved report       |
-| `report:delete`               | UI → Backend | Delete a report         |
-| `report:open-file`            | UI → Backend | Open file in browser    |
+| Channel                       | Direction    | Purpose                               |
+| ----------------------------- | ------------ | ------------------------------------- |
+| `scanner:run-nmap`            | UI → Backend | Start a scan                          |
+| `scanner:validate-target`     | UI → Backend | Check allowlist                       |
+| `scanner:get-history`         | UI → Backend | Load past scans                       |
+| `scanner:abort`               | UI → Backend | Kill running scan                     |
+| `scanner:delete-scan`         | UI → Backend | Remove saved scan                     |
+| `scanner:progress`            | Backend → UI | Live scan output lines                |
+| `scanner:phase-result`        | Backend → UI | Phase 1 early results                 |
+| `llm:analyze-vulnerabilities` | UI → Backend | Send vulns to Gemini AI               |
+| `report:export`               | UI → Backend | Save assessment report                |
+| `report:export-pentest`       | UI → Backend | Save pentest report                   |
+| `report:generate-pentest`     | UI → Backend | Generate pentest report               |
+| `report:get-history`          | UI → Backend | Load past reports                     |
+| `report:open`                 | UI → Backend | Open saved report                     |
+| `report:delete`               | UI → Backend | Delete a report                       |
+| `report:open-file`            | UI → Backend | Open file in browser                  |
+| `scanner:get-grouped-history` | UI → Backend | Load scans grouped by target          |
+| `scanner:get-deltas`          | UI → Backend | Compute delta chain for a target      |
+| `report:generate-delta`       | UI → Backend | Generate comparison PDF               |
+| `report:export-delta`         | UI → Backend | Export comparison PDF via save dialog |
 
 ---
 
 ## Data Storage
 
-| What                  | Where                                     | Format               |
-| --------------------- | ----------------------------------------- | -------------------- |
-| Scan results (raw)    | `data/scans/scan-{timestamp}.xml`         | Nmap XML             |
-| Scan results (parsed) | `data/scans/scan-{timestamp}.json`        | Structured JSON      |
-| Generated reports     | `data/reports/report_{target}_{date}.PDF` | PDF                  |
-| Report metadata       | `data/reports/metadata.json`              | JSON                 |
-| Target allowlist      | `allowed-targets.json`                    | JSON                 |
-| API key               | `.env`                                    | `GEMINI_API_KEY=...` |
+| What                  | Where                                                | Format               |
+| --------------------- | ---------------------------------------------------- | -------------------- |
+| Scan results (raw)    | `data/scans/scan-{timestamp}.xml`                    | Nmap XML             |
+| Scan results (parsed) | `data/scans/scan-{timestamp}.json`                   | Structured JSON      |
+| Generated reports     | `data/reports/report_{target}_{date}.pdf`            | PDF                  |
+| Delta comparison PDFs | `data/reports/delta_{target}_{older}_to_{newer}.pdf` | PDF                  |
+| Report metadata       | `data/reports/metadata.json`                         | JSON                 |
+| Target allowlist      | `allowed-targets.json`                               | JSON                 |
+| API key               | `.env`                                               | `GEMINI_API_KEY=...` |
 
 ---
 
@@ -237,81 +273,103 @@ All communication between frontend and backend goes through `contextBridge.expos
 | Routing           | React Router                         |
 | State             | Custom singleton store + React hooks |
 
-# Planned Implementation Extensions
+---
+
+## Localhost Test Site — `test-site/`
+
+A controlled vulnerable web application used for testing the delta comparison feature. Since external targets (e.g. testphp.vulnweb.com) don't change between scans, this local server provides intentionally introduced vulnerabilities that can be selectively remediated between scan cycles.
+
+| File              | Role                                                                                                |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| `server.js`       | Express server with 12 intentional vulnerabilities (partially remediated for testing)               |
+| `server-fixed.js` | Fully remediated version of the server with all vulnerabilities addressed                           |
+| `public/`         | Static assets: HTML pages, fake `.git/` directory, `config.bak`, `robots.txt`, `uploads/` directory |
+| `package.json`    | Dependencies (Express, cookie-parser)                                                               |
+
+**Intentional vulnerabilities introduced:**
+
+| #   | Vulnerability                | Category | Detection Method                                |
+| --- | ---------------------------- | -------- | ----------------------------------------------- |
+| 1   | Missing security headers     | A05      | http-security-headers NSE script                |
+| 2   | No HTTPS / TLS               | A02      | Post-processing detection in parser             |
+| 3   | Missing CSRF protection      | A01      | http-csrf NSE script                            |
+| 4   | Reflected XSS                | A03      | http-stored-xss / http-dombased-xss NSE scripts |
+| 5   | DOM-based XSS                | A03      | http-dombased-xss NSE script                    |
+| 6   | Insecure cookies             | A02      | http-cookie-flags NSE script                    |
+| 7   | Exposed `.git` directory     | A05      | http-git NSE script                             |
+| 8   | Directory listing enabled    | A01      | http-ls NSE script                              |
+| 9   | Open redirect                | A01      | http-open-redirect NSE script                   |
+| 10  | Backup file exposure         | A05      | http-backup-finder NSE script                   |
+| 11  | Overly permissive robots.txt | A05      | http-robots.txt NSE script                      |
+| 12  | Basic admin panel            | A07      | http-auth-finder NSE script                     |
+
+The workflow for delta testing: start `server.js` → scan → fix selected vulnerabilities → rescan → compare the two scans to observe score changes, resolved/new/persisting classifications, and OWASP delta output.
+
+---
+
+## Reports Page — UI Architecture
+
+The Reports page (`Reports.tsx`) provides a target-grouped sidebar with inline delta comparison support:
+
+- **Target groups** — scans are grouped by target URL in the sidebar, each group expandable to show individual scans
+- **Interleaved layout** — within each group, scan entries alternate with comparison links. After each scan entry, a comparison link to the next older scan is shown inline (e.g. "Scan 3 → Latest")
+- **View modes** — two modes: `full` (single scan pentest report) and `comparison` (delta report between two scans)
+- **No-change detection** — comparisons with zero differences display an inline "No changes" indicator instead of a clickable link
+- **Score trend indicators** — each comparison link shows resolved/new/persisting counts and a directional score arrow (↑/↓/→) with colour coding
+- **PDF preview** — selected reports render as embedded PDFs in the main content area via Blob URLs
+- **Context menu** — right-click on any scan entry to delete it; the sidebar automatically resets selection if the deleted scan was being viewed
+
+---
+
+# Planned / In-Progress Implementation Extensions
 
 The following extensions are designed to strengthen lifecycle integration, validation robustness, and empirical evaluation capabilities within the PurpleTeam Suite.
 
-1. Iterative Scan Delta Comparison
+### 1. Iterative Scan Delta Comparison — ✅ IMPLEMENTED
 
-The system will support structured comparison between consecutive scans of the same target.
+The system supports structured comparison between consecutive scans of the same target.
 
 After a new scan completes:
 
-The most recent previous scan for that target will be loaded.
-
-Vulnerabilities will be categorised as:
-
-Resolved
-
-Persisting
-
-Newly introduced
-
-Security score changes will be calculated (previous vs current).
-
-OWASP category coverage differences will be computed.
-
-A structured Change Summary will be generated and included in both the dashboard and exported reports.
+- The most recent previous scan for that target is loaded.
+- Vulnerabilities are categorised as: **Resolved**, **Persisting**, **Newly introduced**.
+- Security score changes are calculated (previous vs current).
+- OWASP category coverage differences are computed.
+- A structured Change Summary is generated and viewable in both the dashboard and exported reports.
+- A professional PDF comparison report can be generated and exported.
 
 This introduces lifecycle iteration and measurable post-remediation reassessment.
 
-2. Controlled Evaluation Scenario (Localhost Testbed)
+### 2. Controlled Evaluation Scenario (Localhost Testbed) — ✅ IMPLEMENTED
 
-A controlled local environment will be used to:
+A controlled local environment (`test-site/`) is used to:
 
-Introduce known vulnerabilities.
-
-Perform initial assessment.
-
-Remediate selected vulnerabilities.
-
-Re-scan and measure:
-
-Score improvement
-
-Vulnerability reduction
-
-OWASP coverage contraction
-
-Delta comparison output
+- Introduce known vulnerabilities (12 intentional findings).
+- Perform initial assessment.
+- Remediate selected vulnerabilities.
+- Re-scan and measure: score improvement, vulnerability reduction, OWASP coverage contraction, delta comparison output.
 
 This supports empirical evaluation of prioritisation, remediation guidance, and scoring behaviour.
 
-3. Empirical Hallucination Evaluation Layer
+### 3. Empirical Hallucination Evaluation Layer
 
 The hallucination guard will be extended with structured metric logging:
 
-OWASP classification disagreement rate
-
-Fabricated CVE detection count
-
-Confidence mismatch frequency
-
-Trust score distribution across scans
+- OWASP classification disagreement rate
+- Fabricated CVE detection count
+- Confidence mismatch frequency
+- Trust score distribution across scans
 
 Metrics will be persisted for quantitative analysis in Chapter 4.
 This allows empirical assessment of probabilistic AI behaviour under deterministic validation constraints.
 
-4. Exploitability-Aware Risk Weighting
+### 4. Exploitability-Aware Risk Weighting
 
 The security scoring engine will incorporate contextual exploitability factors:
 
-Public-facing port exposure weighting
-
-Database/service exposure amplification
-
-TLS absence penalty
-
-Authentication weakness multipliers
+- Public-facing port exposure weighting
+- Database/service exposure amplification
+- TLS absence penalty
+- Authentication weakness multipliers
 
 All adjustments will remain deterministic and transparent, strengthening prioritisation realism without introducing probabilistic instability.
