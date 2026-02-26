@@ -11,6 +11,13 @@ import type { ScanDelta, OWASPDeltaEntry } from '../analysis/delta-types'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+// PDF footer — page numbers and watermark via Electron's displayHeaderFooter
+const PDF_FOOTER_TEMPLATE = `
+<div style="width: 100%; font-size: 9px; color: #999; font-family: 'Segoe UI', Arial, sans-serif; display: flex; justify-content: center; align-items: center; position: relative; padding: 0 24px;">
+  <span style="letter-spacing: 0.5px;"><span class="pageNumber"></span> | <span class="totalPages"></span></span>
+  <span style="position: absolute; right: 24px; font-style: italic; color: #bbb; font-size: 8px; letter-spacing: 0.5px;">PurpleTeam Suite</span>
+</div>`
+
 function getDataDir(): string {
   const isDev = !app.isPackaged
   if (isDev) return path.join(__dirname, '../../data')
@@ -730,9 +737,12 @@ export async function generateDeltaReport(
 
     const pdfData = await win.webContents.printToPDF({
       printBackground: true,
-      marginsType: 1,
+      margins: { marginType: 'default' },
       pageSize: 'A4',
       landscape: false,
+      displayHeaderFooter: true,
+      headerTemplate: '<span></span>',
+      footerTemplate: PDF_FOOTER_TEMPLATE,
     })
 
     win.close()
@@ -790,9 +800,12 @@ export async function exportDeltaReport(
 
     const pdfData = await win.webContents.printToPDF({
       printBackground: true,
-      marginsType: 1,
+      margins: { marginType: 'default' },
       pageSize: 'A4',
       landscape: false,
+      displayHeaderFooter: true,
+      headerTemplate: '<span></span>',
+      footerTemplate: PDF_FOOTER_TEMPLATE,
     })
 
     win.close()
