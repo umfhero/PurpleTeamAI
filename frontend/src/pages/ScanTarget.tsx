@@ -715,7 +715,7 @@ export default function ScanTarget() {
 
                 <div className="flex gap-3">
                   <button
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => navigate('/dashboard', { state: { target } })}
                     className="px-6 py-3 bg-primary text-primary-foreground font-mono uppercase tracking-wider
                              border border-primary hover:bg-primary/90 transition-transform flex items-center gap-2"
                   >

@@ -142,3 +142,8 @@
 .animate-log-line {
   animation: log-line-appear 0.15s ease-out forwards;
 }
+
+/* Stepper sliding background */
+.stepper-bg-slide {
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}

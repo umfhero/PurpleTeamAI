@@ -25,13 +25,13 @@ export default function OWASPCoverageMatrix({ coverage, distribution }: OWASPCov
     <div className="border border-border bg-background h-full flex flex-col">
       <div className="border-b border-border px-3 py-2">
         <div className="flex justify-between items-center">
-          <h2 className="text-sm font-mono uppercase tracking-wider text-foreground/60">
+          <h2 className="text-sm font-mono uppercase tracking-wider text-foreground/80">
             OWASP Top 10 Coverage
           </h2>
           <div className="text-sm font-mono">
             <span className="text-primary font-bold">{coverage.total}</span>
-            <span className="text-foreground/40">/10</span>
-            <span className="text-foreground/60 ml-2">({coverage.percentage}%)</span>
+            <span className="text-foreground/60">/10</span>
+            <span className="text-foreground/70 ml-2">({coverage.percentage}%)</span>
           </div>
         </div>
       </div>
@@ -57,7 +57,7 @@ export default function OWASPCoverageMatrix({ coverage, distribution }: OWASPCov
                 title={OWASP_LABELS[cat].name}
               >
                 {/* Category ID */}
-                <div className={`text-xs font-mono font-bold ${isFound ? 'text-primary' : 'text-foreground/30'}`}>
+                <div className={`text-xs font-mono font-bold ${isFound ? 'text-primary' : 'text-foreground/50'}`}>
                   {OWASP_LABELS[cat].short}
                 </div>
                 
@@ -87,15 +87,15 @@ export default function OWASPCoverageMatrix({ coverage, distribution }: OWASPCov
               <div key={cat} className="flex items-center justify-between text-xs font-mono">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 border border-primary bg-primary/10"></div>
-                  <span className="text-foreground/60">{OWASP_LABELS[cat].short}</span>
-                  <span className="text-foreground/80">{OWASP_LABELS[cat].name}</span>
+                  <span className="text-foreground/70">{OWASP_LABELS[cat].short}</span>
+                  <span className="text-foreground/90">{OWASP_LABELS[cat].name}</span>
                 </div>
                 <span className="text-primary font-bold">{distribution[cat]}</span>
               </div>
             ))}
           
           {coverage.total === 0 && (
-            <div className="text-xs font-mono text-foreground/40 text-center py-2">
+            <div className="text-xs font-mono text-foreground/60 text-center py-2">
               No OWASP categories detected
             </div>
           )}

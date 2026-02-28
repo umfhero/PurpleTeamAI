@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { AlertTriangle, Target, Search, Shield, Zap, ChevronDown, ChevronRight, FileText, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import type { NmapScanData, VulnerabilityResult } from '../types/electron.d'
 import type { TargetGroup, ScanDeltaChain } from '../types/delta'
 import SecurityScoreCard from '../components/SecurityScoreCard'
 import OWASPCoverageMatrix from '../components/OWASPCoverageMatrix'
 import NotificationBadge from '../components/NotificationBadge'
+import { useResizablePanel } from '../lib/useResizablePanel'
 
 type SortField = 'severity' | 'port' | 'service' | 'cve'
 type SortOrder = 'asc' | 'desc'
@@ -76,6 +77,8 @@ const getScanStats = (scan: NmapScanData) => {
 
 export default function Dashboard() {
     const navigate = useNavigate()
+    const location = useLocation()
+    const incomingTarget = (location.state as { target?: string } | null)?.target
 
     // ── state ──────────────────────────────────────────────────────────────
     const [targetGroups, setTargetGroups] = useState<TargetGroup[]>([])
@@ -90,6 +93,9 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true)
     const [expandedOutputs, setExpandedOutputs] = useState<Set<string>>(new Set())
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; scan: NmapScanData } | null>(null)
+
+    const sidebar = useResizablePanel('dashboard-sidebar', 260, 180, 400)
+    const leftPanel = useResizablePanel('dashboard-left', 420, 280, 700)
 
     const toggleOutput = (vulnId: string) => {
         setExpandedOutputs(prev => {
@@ -116,10 +122,14 @@ export default function Dashboard() {
                 setTargetGroups(groups)
 
                 if (groups.length > 0) {
-                    const firstGroup = groups[0]
-                    setExpandedTarget(firstGroup.target)
-                    setSelectedScan(firstGroup.scans[0])
-                    loadDeltaChain(firstGroup.target)
+                    // If navigated from scan page, open that target's group
+                    const match = incomingTarget
+                        ? groups.find(g => g.target === incomingTarget)
+                        : null
+                    const group = match ?? groups[0]
+                    setExpandedTarget(group.target)
+                    setSelectedScan(group.scans[0])
+                    loadDeltaChain(group.target)
                 }
             }
         } catch (error) {
@@ -127,7 +137,7 @@ export default function Dashboard() {
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [incomingTarget])
 
     useEffect(() => { loadGroups() }, [loadGroups])
 
@@ -257,9 +267,9 @@ export default function Dashboard() {
     return (
         <div className="flex h-full">
             {/* ── Sidebar ─────────────────────────────────────────────────── */}
-            <aside className="w-56 flex flex-col border-r border-border bg-card">
+            <aside className="flex flex-col border-r border-border bg-card shrink-0" style={{ width: sidebar.width }}>
                 <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Scan History</h3>
+                    <h3 className="text-xs font-mono uppercase tracking-wider text-foreground/70">Scan History</h3>
                     <button
                         onClick={handleViewReport}
                         disabled={!selectedScan}
@@ -296,10 +306,10 @@ export default function Dashboard() {
                                             <NotificationBadge count={group.count} />
                                         </div>
                                         {latestScan && (
-                                            <div className="text-[10px] mt-0.5 flex gap-1.5 opacity-70">
+                                            <div className="text-xs mt-0.5 flex gap-1.5">
                                                 <span className={gradeColor(group.latestGrade)}>{group.latestGrade ?? '—'}</span>
-                                                <span>·</span>
-                                                <span>{new Date(latestScan.timestamp).toLocaleDateString()}</span>
+                                                <span className="text-foreground/40">·</span>
+                                                <span className="text-foreground/60">{new Date(latestScan.timestamp).toLocaleDateString()}</span>
                                             </div>
                                         )}
                                     </div>
@@ -328,20 +338,20 @@ export default function Dashboard() {
                                                         }`}
                                                 >
                                                     <div className="flex items-center justify-between gap-1">
-                                                        <span className="text-[10px] text-foreground uppercase tracking-wide">{scanLabel}</span>
-                                                        <span className={`text-[10px] font-bold ${gradeColor(scan.securityScore?.grade)}`}>
+                                                        <span className="text-xs text-foreground uppercase tracking-wide">{scanLabel}</span>
+                                                        <span className={`text-xs font-bold ${gradeColor(scan.securityScore?.grade)}`}>
                                                             {scan.securityScore?.grade ?? '—'}
                                                         </span>
                                                     </div>
-                                                    <div className="text-[10px] text-foreground/70 mt-0.5 truncate">
+                                                    <div className="text-xs text-foreground/60 mt-0.5 truncate">
                                                         {new Date(scan.timestamp).toLocaleString()}
                                                     </div>
-                                                    <div className="flex gap-1.5 mt-0.5 text-[10px]">
+                                                    <div className="flex gap-1.5 mt-1 text-xs font-semibold">
                                                         {stats.critical > 0 && <span className="text-[oklch(0.55_0.22_25)]">C:{stats.critical}</span>}
                                                         {stats.high > 0 && <span className="text-[oklch(0.65_0.25_45)]">H:{stats.high}</span>}
                                                         {stats.medium > 0 && <span className="text-[oklch(0.70_0.15_85)]">M:{stats.medium}</span>}
                                                         {stats.low > 0 && <span className="text-[oklch(0.55_0.15_150)]">L:{stats.low}</span>}
-                                                        <span className="text-muted-foreground">P:{stats.ports}</span>
+                                                        <span className="text-foreground/50">P:{stats.ports}</span>
                                                     </div>
                                                 </button>
                                             )
@@ -354,11 +364,14 @@ export default function Dashboard() {
                 </div>
             </aside>
 
+            {/* Sidebar drag handle */}
+            <div onMouseDown={sidebar.onMouseDown} className="w-1 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors shrink-0" />
+
             {/* ── Main Content ─────────────────────────────────────────────── */}
             <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="flex-1 flex overflow-hidden">
                     {/* Left Panel: Score + OWASP + Scan Progression */}
-                    <div className="flex-1 flex flex-col border-r border-border overflow-y-auto overflow-x-hidden min-w-[300px] max-w-[50%]">
+                    <div className="flex flex-col border-r border-border overflow-y-auto overflow-x-hidden shrink-0" style={{ width: leftPanel.width }}>
                         {selectedScan?.securityScore && (
                             <div className="border-b border-border">
                                 <SecurityScoreCard score={selectedScan.securityScore} />
@@ -379,16 +392,16 @@ export default function Dashboard() {
                             <div className="border-b border-border">
                                 <div className="px-3 py-2 border-b border-border/60 flex items-center gap-2">
                                     <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
-                                    <h4 className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                                    <h4 className="text-xs font-mono uppercase tracking-wider text-foreground/70">
                                         Scan Progression
                                     </h4>
-                                    <span className="text-[9px] text-muted-foreground opacity-60 ml-auto">
+                                    <span className="text-xs text-foreground/50 ml-auto">
                                         {selectedGroup.count} scans
                                     </span>
                                 </div>
 
                                 {loadingDeltas ? (
-                                    <div className="px-3 py-3 text-[10px] font-mono text-muted-foreground">
+                                    <div className="px-3 py-3 text-xs font-mono text-foreground/60">
                                         Computing deltas...
                                     </div>
                                 ) : deltaChain && deltaChain.deltas.length > 0 ? (
@@ -401,7 +414,7 @@ export default function Dashboard() {
 
                                             return (
                                                 <div key={`${delta.olderTimestamp}-${delta.newerTimestamp}`}
-                                                    className="px-3 py-2 font-mono text-[10px]">
+                                                    className="px-3 py-2 font-mono text-xs">
                                                     <div className="flex items-center gap-1.5 text-foreground mb-0.5">
                                                         <span>{olderLabel}</span>
                                                         <span className="text-foreground/50">→</span>
@@ -450,7 +463,7 @@ export default function Dashboard() {
                                         })}
                                     </div>
                                 ) : (
-                                    <div className="px-3 py-3 text-[10px] font-mono text-muted-foreground opacity-50">
+                                    <div className="px-3 py-3 text-xs font-mono text-foreground/50">
                                         Need at least 2 scans to show progression.
                                     </div>
                                 )}
@@ -458,13 +471,16 @@ export default function Dashboard() {
                         )}
                     </div>
 
+                    {/* Left/Right panel drag handle */}
+                    <div onMouseDown={leftPanel.onMouseDown} className="w-1 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors shrink-0" />
+
                     {/* Right Panel: Vulnerabilities List */}
                     <div className="flex-1 flex flex-col overflow-hidden min-w-[300px]">
                         {selectedScan && (
-                            <div className="px-4 py-1.5 border-b border-border bg-muted/10 flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
+                            <div className="px-4 py-1.5 border-b border-border bg-muted/10 flex items-center gap-2 font-mono text-xs text-foreground/60">
                                 <span className="truncate font-semibold text-foreground">{selectedScan.target}</span>
-                                <span className="opacity-50">·</span>
-                                <span className="opacity-70">{new Date(selectedScan.timestamp).toLocaleString()}</span>
+                                <span className="text-foreground/40">·</span>
+                                <span>{new Date(selectedScan.timestamp).toLocaleString()}</span>
                             </div>
                         )}
 
@@ -517,13 +533,13 @@ export default function Dashboard() {
                                                     <div className="mt-2 text-xs font-mono text-primary/90 italic">{cveExplanation}</div>
                                                 )}
 
-                                                <div className="mt-2 text-xs font-mono text-foreground/70 line-clamp-2">{vuln.description}</div>
+                                                <div className="mt-2 text-xs font-mono text-foreground/80 line-clamp-2">{vuln.description}</div>
 
                                                 {vuln.output && (
                                                     <div className="mt-3">
                                                         <button
                                                             onClick={() => toggleOutput(vuln.id)}
-                                                            className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                                                            className="flex items-center gap-1 text-xs uppercase tracking-wider text-foreground/60 hover:text-foreground transition-colors"
                                                         >
                                                             {isOutputExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                                                             Raw Output
@@ -539,14 +555,14 @@ export default function Dashboard() {
                                                 {analysis && (
                                                     <div className="mt-4 pt-3 border-t border-border space-y-2">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">AI Analysis</span>
-                                                            <span className="text-[10px] text-muted-foreground">({(analysis.confidenceScore * 100).toFixed(0)}% confidence)</span>
+                                                            <span className="text-xs uppercase tracking-wider text-primary font-semibold">AI Analysis</span>
+                                                            <span className="text-xs text-foreground/60">({(analysis.confidenceScore * 100).toFixed(0)}% confidence)</span>
                                                         </div>
                                                         <p className="text-xs font-mono text-foreground/80">{analysis.plainEnglishSummary}</p>
                                                         {analysis.affectedEndpoints.length > 0 && (
                                                             <div>
-                                                                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Affected Endpoints</div>
-                                                                <ul className="mt-1 text-xs font-mono list-disc list-inside text-foreground/70">
+                                                                <div className="text-xs uppercase tracking-wider text-foreground/70">Affected Endpoints</div>
+                                                                <ul className="mt-1 text-xs font-mono list-disc list-inside text-foreground/80">
                                                                     {analysis.affectedEndpoints.map((endpoint, idx) => (
                                                                         <li key={idx}>{endpoint}</li>
                                                                     ))}
@@ -554,8 +570,8 @@ export default function Dashboard() {
                                                             </div>
                                                         )}
                                                         <div>
-                                                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Remediation</div>
-                                                            <ol className="mt-1 text-xs font-mono list-decimal list-inside text-foreground/70 space-y-0.5">
+                                                            <div className="text-xs uppercase tracking-wider text-foreground/70">Remediation</div>
+                                                            <ol className="mt-1 text-xs font-mono list-decimal list-inside text-foreground/80 space-y-0.5">
                                                                 {analysis.remediationSteps.map((step, idx) => (
                                                                     <li key={idx}>{step}</li>
                                                                 ))}
@@ -563,7 +579,7 @@ export default function Dashboard() {
                                                         </div>
                                                         {analysis.owaspCategory && (
                                                             <div className="flex items-center gap-2 text-xs">
-                                                                <span className="text-muted-foreground">OWASP:</span>
+                                                                <span className="text-foreground/70">OWASP:</span>
                                                                 <span className="text-primary font-semibold">{analysis.owaspCategory}</span>
                                                             </div>
                                                         )}
@@ -583,22 +599,22 @@ export default function Dashboard() {
                     <div className="px-4 py-2 flex flex-wrap gap-4 text-xs font-mono border-t border-border bg-card">
                         <div className="flex items-center gap-1.5">
                             <Shield className="w-3.5 h-3.5 text-primary" />
-                            <span className="text-muted-foreground">Vulns:</span>
+                            <span className="text-foreground/70">Vulns:</span>
                             <span className="font-semibold">{currentStats.total}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <Zap className="w-3.5 h-3.5 text-[oklch(0.55_0.22_25)]" />
-                            <span className="text-muted-foreground">Critical:</span>
+                            <span className="text-foreground/70">Critical:</span>
                             <span className="font-semibold text-[oklch(0.55_0.22_25)]">{currentStats.critical}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <AlertTriangle className="w-3.5 h-3.5 text-[oklch(0.65_0.25_45)]" />
-                            <span className="text-muted-foreground">High:</span>
+                            <span className="text-foreground/70">High:</span>
                             <span className="font-semibold text-[oklch(0.65_0.25_45)]">{currentStats.high}</span>
                         </div>
                         <div className="flex items-center gap-1.5 relative group cursor-help">
-                            <Target className="w-3.5 h-3.5 text-muted-foreground" />
-                            <span className="text-muted-foreground">Ports:</span>
+                            <Target className="w-3.5 h-3.5 text-foreground/60" />
+                            <span className="text-foreground/70">Ports:</span>
                             <span className="font-semibold">{currentStats.ports}</span>
                             {currentStats.portDetails.length > 0 && (
                                 <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-card border border-border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 whitespace-nowrap">
