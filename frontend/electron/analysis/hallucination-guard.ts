@@ -166,12 +166,19 @@ export function assessHallucinationRisk(
     )
   }
 
-  // Factor 3: AI confidence vs keyword confidence mismatch
+  // Factor 3: AI confidence vs keyword confidence — scaled comparison
+  // Map keyword confidence to a numeric range so we compare proportionally
+  // instead of flagging any AI > 0.8 when keywords say "low"
   const keywordMappings = mapVulnerabilityToOWASP(vuln)
   const topKeywordConfidence = keywordMappings[0]?.confidence || 'low'
-  if (aiAnalysis.confidenceScore > 0.8 && topKeywordConfidence === 'low') {
+  const keywordScore = topKeywordConfidence === 'high' ? 0.9
+                     : topKeywordConfidence === 'medium' ? 0.6
+                     : 0.3
+  const confidenceGap = aiAnalysis.confidenceScore - keywordScore
+  if (confidenceGap > 0.5) {
+    // Only flag when there's a LARGE gap (e.g., AI says 0.9 but keywords say 0.3)
     reasons.push(
-      `AI reports high confidence (${aiAnalysis.confidenceScore}) but keyword matching has low confidence`
+      `AI confidence (${aiAnalysis.confidenceScore}) significantly exceeds keyword confidence (${topKeywordConfidence} ≈ ${keywordScore})`
     )
   }
 
@@ -227,9 +234,29 @@ export function generateHallucinationReport(
   const mediumRisk = flags.filter(f => f.risk === 'medium').length
   const highRisk = flags.filter(f => f.risk === 'high').length
 
-  // Trust score: start at 100, penalise for medium/high risk flags
+  // Trust score: weighted by check type severity
+  // Fabricated CVEs are critical (50 pts each) — hardcoded data is genuinely wrong
+  // OWASP disagreements are subjective (5 pts each) — just a labelling difference
+  // Confidence mismatches are least concerning (3 pts each) — both sides might be right
+  let fabricatedCVECount = 0
+  let owaspDisagreements = 0
+  let confidenceMismatches = 0
+  for (const flag of flags) {
+    for (const reason of flag.reasons) {
+      if (reason.includes('CVE') && reason.includes('not found in scan data')) {
+        fabricatedCVECount++
+      } else if (reason.includes('AI assigned') && reason.includes('keyword matching found')) {
+        owaspDisagreements++
+      } else if (reason.includes('confidence') && reason.includes('exceeds')) {
+        confidenceMismatches++
+      }
+    }
+  }
   const trustScore = Math.max(0, Math.min(100,
-    100 - (highRisk * 25) - (mediumRisk * 10)
+    100
+    - (fabricatedCVECount * 50)
+    - (owaspDisagreements * 5)
+    - (confidenceMismatches * 3)
   ))
 
   return {

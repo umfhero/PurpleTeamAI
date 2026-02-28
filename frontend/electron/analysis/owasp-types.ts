@@ -29,7 +29,11 @@ export const OWASP_TOP_10: Record<OWASPCategory, OWASPCategoryInfo> = {
     keywords: [
       'access control', 'authorization', 'privilege escalation', 'vertical privilege',
       'horizontal privilege', 'path traversal', 'directory traversal', 'forceful browsing',
-      'insecure direct object reference', 'idor', 'missing authorization'
+      'insecure direct object reference', 'idor', 'missing authorization',
+      'csrf', 'cross-site request forgery', 'anti-forgery',
+      'information disclosure', 'file inclusion', 'lfi', 'rfi',
+      'forced browsing', 'missing function level', 'access bypass',
+      'unauthorized access', 'privilege', 'insecure direct object'
     ],
     cvePatterns: ['CVE-*-*'] // Generic - requires context
   },
@@ -40,7 +44,11 @@ export const OWASP_TOP_10: Record<OWASPCategory, OWASPCategoryInfo> = {
     keywords: [
       'encryption', 'weak cipher', 'ssl', 'tls', 'https', 'certificate',
       'weak hash', 'md5', 'sha1', 'cleartext', 'plaintext password',
-      'insecure protocol', 'weak encryption', 'crypto'
+      'insecure protocol', 'weak encryption', 'crypto',
+      'sslv2', 'sslv3', 'tls 1.0', 'tls 1.1', 'rc4', 'des', '3des',
+      'diffie-hellman', 'dh key', 'sweet32', 'poodle', 'beast',
+      'heartbleed', 'drown', 'logjam', 'freak',
+      'cleartext transmission', 'unencrypted', 'plain text'
     ],
     cvePatterns: ['CVE-*-*'] // SSL/TLS specific CVEs would match here
   },
@@ -51,7 +59,10 @@ export const OWASP_TOP_10: Record<OWASPCategory, OWASPCategoryInfo> = {
     keywords: [
       'sql injection', 'sqli', 'xss', 'cross-site scripting', 'command injection',
       'ldap injection', 'xpath injection', 'xml injection', 'code injection',
-      'os command', 'shell injection', 'script injection', 'NoSQL injection'
+      'os command', 'shell injection', 'script injection', 'nosql injection',
+      'template injection', 'ssti', 'crlf injection', 'header injection',
+      'expression language', 'ognl', 'log4j', 'log4shell',
+      'remote code execution', 'rce', 'eval injection'
     ],
     cvePatterns: ['CVE-*-*'] // Many injection CVEs
   },
@@ -72,7 +83,14 @@ export const OWASP_TOP_10: Record<OWASPCategory, OWASPCategoryInfo> = {
     keywords: [
       'default credentials', 'default password', 'misconfiguration', 'verbose error',
       'stack trace', 'directory listing', 'unnecessary features', 'unused pages',
-      'unpatched', 'insecure default', 'admin interface', 'debug mode'
+      'unpatched', 'insecure default', 'admin interface', 'debug mode',
+      'clickjacking', 'x-frame-options', 'content-type-options', 'x-content-type',
+      'hsts', 'strict-transport', 'missing header', 'security header',
+      'cookie flag', 'secure flag', 'httponly', 'samesite',
+      'cors', 'server header', 'x-powered-by', 'version disclosure',
+      'information leak', 'http method', 'options method', 'trace method',
+      'directory indexing', 'banner grabbing', 'server banner',
+      'error message', 'error page', 'default page'
     ],
     cvePatterns: ['CVE-*-*']
   },
@@ -83,7 +101,10 @@ export const OWASP_TOP_10: Record<OWASPCategory, OWASPCategoryInfo> = {
     keywords: [
       'outdated', 'vulnerable library', 'known vulnerability', 'component',
       'dependency', 'third-party', 'old version', 'unsupported version',
-      'end of life', 'eol'
+      'end of life', 'eol',
+      'outdated software', 'outdated version', 'deprecated',
+      'vulnerable component', 'known cve', 'patch available',
+      'version behind', 'obsolete', 'legacy version'
     ],
     cvePatterns: ['CVE-*-*'] // Most CVEs fall here
   },
@@ -94,7 +115,10 @@ export const OWASP_TOP_10: Record<OWASPCategory, OWASPCategoryInfo> = {
     keywords: [
       'authentication', 'session', 'credential stuffing', 'brute force',
       'weak password', 'session fixation', 'session hijacking', 'auth bypass',
-      'broken authentication', 'password', 'login'
+      'broken authentication', 'password', 'login',
+      'multi-factor', 'mfa', '2fa', 'otp', 'default login',
+      'password policy', 'account lockout', 'credential reuse',
+      'session timeout', 'session management', 'token expiry'
     ],
     cvePatterns: ['CVE-*-*']
   },

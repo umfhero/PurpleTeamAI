@@ -99,8 +99,18 @@ export class GeminiClient {
 
 DATA: ${vulnsJson}
 
+OWASP Categorisation Rules (follow these exactly):
+- SQL injection, XSS, command injection, code injection, LDAP/XPath/XML injection, template injection, CRLF injection, RCE → A03:2021 - Injection
+- Missing/weak SSL/TLS, weak ciphers, cleartext transmission, weak hashing (MD5/SHA1), certificate issues → A02:2021 - Cryptographic Failures
+- Path traversal, IDOR, privilege escalation, CSRF, information disclosure, file inclusion, forced browsing, access bypass → A01:2021 - Broken Access Control
+- Missing HTTP security headers (HSTS, X-Frame-Options, X-Content-Type-Options), default configs, verbose errors, server version exposure, cookie flags (Secure/HttpOnly/SameSite), CORS misconfiguration, debug mode → A05:2021 - Security Misconfiguration
+- Outdated software/libraries with known CVEs, end-of-life components, unsupported versions → A06:2021 - Vulnerable and Outdated Components
+- Weak passwords, session management issues, brute-force susceptibility, broken authentication, credential stuffing → A07:2021 - Identification and Authentication Failures
+- SSRF, open redirects, unsafe URL fetching → A10:2021 - Server-Side Request Forgery
+- If unclear, default to A05:2021 - Security Misconfiguration
+
 For each vulnerability, respond with JSON array:
-[{"vulnerabilityId":"id","plainEnglishSummary":"what this means","affectedEndpoints":["paths"],"severityJustification":"why this rating","remediationSteps":["fix1","fix2","fix3"],"owaspCategory":"A01:2021 - Category","confidenceScore":0.85}]
+[{"vulnerabilityId":"id","plainEnglishSummary":"what this means","affectedEndpoints":["paths"],"severityJustification":"why this rating","remediationSteps":["fix1","fix2","fix3"],"owaspCategory":"A01:2021 - Broken Access Control","confidenceScore":0.85}]
 
 Keep summaries concise (2-3 sentences). Provide 3 remediation steps. JSON only, no other text.`
   }

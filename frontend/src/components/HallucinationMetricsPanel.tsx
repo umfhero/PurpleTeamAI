@@ -190,7 +190,7 @@ export default function HallucinationMetricsPanel({ selectedScanTimestamp, targe
               <strong>What it measures:</strong> Agreement between AI analysis and keyword validators. Low scores mean "validation caught differences - review manually." High scores mean "AI and validators agree."
             </div>
             <div className="text-[10px] font-mono text-foreground/50 mb-2">
-              Formula: 100 - (high-risk × 25) - (medium-risk × 10) | Low score = validation system working, flagging items for review
+              Formula: 100 - (fabricated CVEs × 50) - (OWASP disagreements × 5) - (confidence mismatches × 3)
             </div>
             {chartData.length === 1 ? (
               <div className="text-center py-4 text-xs font-mono text-foreground/60">
