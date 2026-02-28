@@ -28,7 +28,7 @@ export default function Layout() {
                         <span className="font-bold text-xs text-muted-foreground tracking-tight">SUITE</span>
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-mono text-muted-foreground tracking-wider">v2.3.0-dev</span>
+                        <span className="text-[10px] font-mono text-muted-foreground tracking-wider">v2.5.0-dev</span>
                         <span className="text-[10px] font-mono text-muted-foreground tracking-wider">READY</span>
                     </div>
                 </div>
