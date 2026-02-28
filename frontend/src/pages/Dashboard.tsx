@@ -390,7 +390,10 @@ export default function Dashboard() {
 
                         {selectedScan?.llmAnalysis?.hallucinationReport && (
                             <div className="border-b border-border">
-                                <HallucinationMetricsPanel selectedScanTimestamp={selectedScan?.timestamp} />
+                                <HallucinationMetricsPanel 
+                                    selectedScanTimestamp={selectedScan?.timestamp} 
+                                    target={selectedScan?.target}
+                                />
                             </div>
                         )}
 

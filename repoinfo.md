@@ -36,8 +36,7 @@ Target → Validate → Phase 1 Scan → Parse XML → Phase 2 Scan → Parse XM
 
 testphp.vulnweb.com
 localhost
-https://juice-shop.herokuapp.com/#/
-https://google-gruyere.appspot.com/
+https://demo.testfire.net/
 
 ---
 
@@ -475,6 +474,332 @@ When adding Nikto, OWASP ZAP, or other scanners, vulnerability counts may exceed
 4. Hallucination guard processes the combined results normally
 
 This maintains the same API contract while handling arbitrary vulnerability counts. No UI changes needed — batching is transparent to the renderer.
+
+### 3.5 Refining Hallucination Metrics — Improving Trust Scores
+
+**Current status:** Trust scores are consistently low (0–65) across scans. This is NOT because the AI is unreliable — it's because the **validators are too simplistic** and the **AI categorises differently** than keyword matching. The goal is to bring trust scores closer to 90+ by closing the gap between AI judgement and validator logic, without weakening the safety net.
+
+**Important clarification:** These metrics measure TOOL reliability (AI vs validators agreement), NOT target security. A trust score of 0 does not mean the target is insecure — it means the AI and validators disagree and results should be manually reviewed. Getting scores to green requires improving the tool's internal consistency, not fixing vulnerabilities on the target.
+
+---
+
+#### Root Cause Analysis: Why Scores Are Low
+
+**1. OWASP Disagreement (currently ~62-100%)**
+
+The biggest contributor to low trust scores. The current `owasp-mapper.ts` uses basic keyword matching with limited vocabulary:
+
+```
+Current keyword approach:
+- Scans title + description + CVE + service + output for keywords like "sql injection", "xss", "ssl"
+- Confidence tiers: 3+ keyword hits = high, 2 = medium, 1 = low
+- Fallback: unmatched vuln with CVE → A06, no match at all → A05
+```
+
+**Why this fails:**
+
+- AI uses semantic understanding (e.g., "this cookie lacks secure flag" → A05: Security Misconfiguration)
+- Keyword matcher might see "cookie" and match nothing, falling back to A05 by default — but for the wrong reason
+- Or keyword matcher matches "ssl" in the description and assigns A02 (Cryptographic Failures), while AI correctly identifies it as A05 (Security Misconfiguration) because the issue is a missing HTTP header, not a crypto failure
+- Many Nmap vulnerability descriptions don't use the exact OWASP keywords our matcher expects
+
+**Specific observed disagreement patterns:**
+
+| Vulnerability Type                           | AI Says                     | Keyword Matcher Says         | Why They Disagree                                               |
+| -------------------------------------------- | --------------------------- | ---------------------------- | --------------------------------------------------------------- |
+| Missing HTTP headers (HSTS, X-Frame-Options) | A05 (Misconfiguration)      | A02 (Crypto) or fallback A05 | Keyword "ssl" triggers A02 but the issue is config, not crypto  |
+| Outdated server software                     | A06 (Vulnerable Components) | A05 (Misconfiguration)       | No keywords for "outdated" hit, falls back to A05               |
+| CSRF vulnerabilities                         | A01 (Broken Access Control) | A05 (Misconfiguration)       | "csrf" isn't in any keyword list                                |
+| Information Disclosure                       | A01 (Broken Access Control) | A05 (Misconfiguration)       | "disclosure" not in keyword lists                               |
+| Open redirect                                | A10 (SSRF)                  | A05 (Misconfiguration)       | "redirect" keyword exists for A10, but matcher may miss context |
+
+**2. Confidence Mismatch (currently ~37-76%)**
+
+The AI reports high confidence (>0.8) on vulnerabilities where the keyword matcher only has "low" confidence (1 keyword hit). This triggers a flag because:
+
+```typescript
+// Current logic in hallucination-guard.ts:
+if (aiAnalysis.confidenceScore > 0.8 && topKeywordConfidence === "low") {
+  reasons.push(
+    "AI reports high confidence but keyword matching has low confidence",
+  );
+}
+```
+
+**Why this is too aggressive:** The keyword matcher's "low" confidence just means it found 1 keyword. For obvious vulnerabilities like "SQL Injection in login form", the AI rightfully reports 0.95 confidence, but if the description only contains the word "sql" (1 keyword), the matcher says "low confidence" — triggering a false mismatch. The AI is correct; the validator is too dumb.
+
+**3. Trust Score Formula Amplifies Small Issues**
+
+```
+trustScore = 100 - (highRisk × 25) - (mediumRisk × 10)
+```
+
+With 8 vulnerabilities: if 2 get flagged as high-risk (OWASP disagreement + confidence mismatch = 2 reasons = high), and 5 as medium-risk, the score becomes:
+`100 - (2 × 25) - (5 × 10) = 100 - 50 - 50 = 0`
+
+The formula is punitive — a single high-risk disagreement costs 25 points. With even moderate disagreement rates, scores quickly hit 0.
+
+---
+
+#### Improvement Strategy 1: Smarter OWASP Validators
+
+**Priority: HIGH — This is the biggest lever for improving trust scores.**
+
+**Current approach (simple keyword matching):**
+
+```typescript
+// owasp-mapper.ts — current logic
+const matches = category.keywords.filter((keyword) =>
+  searchText.includes(keyword.toLowerCase()),
+);
+```
+
+**Proposed improvements:**
+
+**a) Expanded keyword vocabulary**
+Add more keywords to each OWASP category so the matcher covers the same vocabulary Gemini uses:
+
+```typescript
+// Example: A05_SECURITY_MISCONFIGURATION needs these keywords added:
+("csrf",
+  "cross-site request forgery",
+  "clickjacking",
+  "x-frame-options",
+  "content-type-options",
+  "x-content-type",
+  "hsts",
+  "strict-transport",
+  "cookie flag",
+  "secure flag",
+  "httponly",
+  "samesite",
+  "cors",
+  "server header",
+  "x-powered-by",
+  "information leak",
+  "version disclosure",
+  "http method",
+  "options method",
+  "trace method",
+  "directory indexing");
+```
+
+```typescript
+// Example: A01 needs:
+("idor",
+  "insecure direct object",
+  "privilege",
+  "unauthorized access",
+  "access bypass",
+  "csrf",
+  "missing function level",
+  "forced browsing",
+  "information disclosure",
+  "file inclusion",
+  "lfi",
+  "rfi");
+```
+
+**b) Weighted keyword scoring (replace simple count)**
+Instead of 3+ hits = high, weight keywords by specificity:
+
+```typescript
+// Proposed: weighted keywords
+const keywordWeights: Record<string, number> = {
+  "sql injection": 10, // Very specific → high weight
+  xss: 10,
+  sql: 3, // Could appear in many contexts → lower weight
+  database: 2,
+  error: 1, // Generic → lowest weight
+};
+// Confidence = sum(weights) / threshold
+```
+
+**c) Multi-category allowance**
+The AI might say A03 (Injection) while the keyword matcher returns [A03, A05]. Currently, if A03 is in the keyword matcher's list, it counts as agreement. But if the keyword matcher finds A05 first (by sort order) and the AI says A03, it might still flag as disagreement depending on which category the matcher considered primary. Fix: agreement should check if AI's category appears ANYWHERE in the keyword matcher's results, not just the top one.
+
+**Current check (already correct but verify):**
+
+```typescript
+if (aiCategory && !keywordCategories.includes(aiCategory)) {
+  // This checks ALL categories, which is correct
+}
+```
+
+**d) Context-aware regex rules**
+Add more regex special cases like the existing SQL/XSS/path-traversal rules:
+
+```typescript
+// Missing HTTP security headers → A05
+if (
+  /(missing.*header|x-frame|x-content-type|strict-transport|hsts|clickjack)/i.test(
+    searchText,
+  )
+) {
+  // → A05 Security Misconfiguration
+}
+
+// CSRF → A01
+if (/(csrf|cross-site request forgery|anti-forgery)/i.test(searchText)) {
+  // → A01 Broken Access Control
+}
+
+// Information disclosure → A01
+if (
+  /(information disclosure|directory listing|source code.*leak|version.*disclosure)/i.test(
+    searchText,
+  )
+) {
+  // → A01 Broken Access Control
+}
+
+// Cookie security → A05
+if (
+  /(cookie.*secure|cookie.*httponly|session.*cookie|samesite)/i.test(searchText)
+) {
+  // → A05 Security Misconfiguration
+}
+```
+
+---
+
+#### Improvement Strategy 2: Tune the AI Prompt
+
+**Priority: MEDIUM — Aligns AI output with validator expectations.**
+
+The Gemini prompt (in `gemini.ts` `buildPrompt()`) instructs the AI to assign OWASP categories, but doesn't constrain HOW it should categorise. If we tell the AI to follow the same logic our validators use, they'll agree more often.
+
+**Current prompt (relevant section):**
+
+```
+"owaspCategory": "A01:2021 - Category"
+```
+
+**Proposed addition to prompt:**
+
+```
+OWASP Categorisation Rules (follow these exactly):
+- SQL injection, XSS, command injection, code injection → A03 (Injection)
+- Missing/weak SSL/TLS, weak ciphers, cleartext transmission → A02 (Cryptographic Failures)
+- Path traversal, IDOR, privilege escalation, CSRF, information disclosure → A01 (Broken Access Control)
+- Missing HTTP headers, default configs, verbose errors, server version exposure → A05 (Security Misconfiguration)
+- Outdated software/libraries with known CVEs → A06 (Vulnerable Components)
+- Weak passwords, session issues, brute-force susceptibility → A07 (Auth Failures)
+- If unclear, default to A05 (Security Misconfiguration)
+```
+
+This doesn't compromise the AI's analysis quality — it just standardises the OWASP labelling to match our deterministic validators, reducing false disagreements.
+
+---
+
+#### Improvement Strategy 3: Adjust Confidence Mismatch Thresholds
+
+**Priority: MEDIUM — Reduces false positives from confidence comparison.**
+
+**Current logic (too strict):**
+
+```typescript
+if (aiAnalysis.confidenceScore > 0.8 && topKeywordConfidence === "low") {
+  reasons.push(
+    "AI reports high confidence but keyword matching has low confidence",
+  );
+}
+```
+
+**Problem:** "low" keyword confidence just means 1 keyword matched. For obvious vulns, the AI is RIGHT to be confident.
+
+**Proposed fix options:**
+
+**Option A: Raise the AI threshold**
+
+```typescript
+// Only flag if AI is VERY high confidence AND keywords are low
+if (aiAnalysis.confidenceScore > 0.95 && topKeywordConfidence === 'low') { ... }
+```
+
+**Option B: Lower the keyword bar**
+
+```typescript
+// Don't flag if keyword matcher found at least SOME match
+if (aiAnalysis.confidenceScore > 0.8 && keywordMappings.length === 0) { ... }
+```
+
+**Option C: Scale the comparison (recommended)**
+
+```typescript
+// Map keyword confidence to a numeric range, compare proportionally
+const keywordScore =
+  topKeywordConfidence === "high"
+    ? 0.9
+    : topKeywordConfidence === "medium"
+      ? 0.6
+      : 0.3;
+const gap = aiAnalysis.confidenceScore - keywordScore;
+if (gap > 0.5) {
+  // Only flag when there's a LARGE gap (AI says 0.9, keywords say 0.3)
+  reasons.push(
+    `AI confidence ${aiAnalysis.confidenceScore} significantly exceeds keyword confidence`,
+  );
+}
+```
+
+---
+
+#### Improvement Strategy 4: Refine the Trust Score Formula
+
+**Priority: LOW — Formula is fine, the underlying data needs fixing first.**
+
+The formula `100 - (highRisk × 25) - (mediumRisk × 10)` is intentionally punitive. Once Strategies 1-3 reduce the number of high/medium-risk flags, the formula will naturally produce higher scores.
+
+However, if scores remain low after validator improvements, consider:
+
+**Option A: Softer penalties**
+
+```
+trustScore = 100 - (highRisk × 15) - (mediumRisk × 5)
+```
+
+**Option B: Percentage-based scaling**
+
+```typescript
+// Scale by total analysed so large scans aren't unfairly penalised
+const highRate = highRisk / totalAnalysed;
+const medRate = mediumRisk / totalAnalysed;
+trustScore = Math.round(100 * (1 - highRate * 0.5 - medRate * 0.2));
+```
+
+**Option C: Weighted by check type**
+
+```typescript
+// Not all disagreements are equal
+trustScore =
+  100 -
+  fabricatedCVECount * 50 - // Fabricated CVEs are CRITICAL
+  owaspDisagreements * 5 - // OWASP disagreements are subjective
+  confidenceMismatches * 3; // Confidence gaps are least concerning
+```
+
+Option C is most aligned with the actual severity of each issue. A fabricated CVE is genuinely dangerous (hardcoded data is wrong). An OWASP disagreement is just a labelling difference. A confidence mismatch is the least concerning since both sides might be right.
+
+---
+
+#### Implementation Priority Order
+
+| Priority | Strategy                                                      | Expected Impact on Trust Score                | Effort                                      |
+| -------- | ------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------- |
+| 1        | **Expanded keywords + regex rules** in `owasp-mapper.ts`      | +20-40 points (biggest single lever)          | Low — just add words to existing arrays     |
+| 2        | **AI prompt alignment** in `gemini.ts`                        | +10-20 points (reduces AI-side disagreements) | Low — add categorisation rules to prompt    |
+| 3        | **Confidence mismatch rescaling** in `hallucination-guard.ts` | +5-15 points (reduces false positive flags)   | Low — change threshold logic                |
+| 4        | **Trust score formula revision** in `hallucination-guard.ts`  | Variable (rebalances penalties)               | Low — but do this last, after data improves |
+
+**Target: Trust scores of 70-90 after implementing strategies 1-3**, which would indicate that the AI and validators agree on the majority of categorisations, with only genuinely ambiguous cases flagged for manual review.
+
+**Success criteria:**
+
+- OWASP disagreement rate ≤ 20% (down from 62-100%)
+- Confidence mismatch rate ≤ 15% (down from 37-76%)
+- Trust score ≥ 70 on repeat scans of the same target
+- Fabricated CVE count remains at 0 (never weaken this check)
 
 ### 4. Exploitability-Aware Risk Weighting
 
