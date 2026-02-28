@@ -168,10 +168,91 @@ export default function ScanTarget() {
     }
   }
 
+  /**
+   * Skip-scan shortcut: prefix target with "!" to skip Nmap and re-run
+   * LLM analysis on the most recent scan for that target.
+   * E.g. "!testphp.vulnweb.com" → loads last scan → LLM only.
+   */
+  const handleSkipScan = async (realTarget: string) => {
+    setScanState('scanning')
+    setScanError(null)
+    setScanLogs([])
+    setIsInputCollapsed(true)
+    appendLog(`[Skip-Scan] Loading most recent scan for: ${realTarget}\n`)
+
+    try {
+      const history = await window.electronAPI!.scanner.getHistory()
+      const matching = history
+        .filter((s: any) => s.target === realTarget)
+        .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+
+      if (matching.length === 0) {
+        setScanError(`No previous scan found for "${realTarget}". Run a full scan first.`)
+        setScanState('error')
+        return
+      }
+
+      // Prefer the most recent scan with the most vulnerabilities (skip incomplete Phase-1-only scans)
+      const bestScan = matching.reduce((best: any, scan: any) =>
+        (scan.vulnerabilities?.length ?? 0) > (best.vulnerabilities?.length ?? 0) ? scan : best
+      , matching[0])
+      const scanData = { ...bestScan } // Clone to avoid mutating history cache
+      appendLog(`[Skip-Scan] Found scan from ${scanData.timestamp} with ${scanData.vulnerabilities?.length ?? 0} vulnerabilities\n`)
+      setScanResult(scanData)
+      setScanState('deepening')
+
+      // Go straight to LLM analysis
+      if (scanData.vulnerabilities && scanData.vulnerabilities.length > 0) {
+        console.log(`[ScanTarget] Skip-scan: starting LLM analysis for ${scanData.vulnerabilities.length} vulnerabilities`)
+        setScanState('analyzing')
+        appendLog(`[LLM] Starting AI analysis for ${scanData.vulnerabilities.length} vulnerabilities...\n`)
+
+        const llmResult = await window.electronAPI!.llm.analyzeVulnerabilities({
+          vulnerabilities: scanData.vulnerabilities,
+          target: scanData.target,
+          scanTimestamp: scanData.timestamp,
+        })
+
+        if (llmResult.success) {
+          scanData.llmAnalysis = llmResult
+          appendLog(`[LLM] Analysis complete: ${llmResult.analyses.length} vulnerabilities analyzed\n`)
+          try {
+            await window.electronAPI!.scanner.saveScan(scanData)
+            appendLog('[Skip-Scan] Saved enriched scan data\n')
+          } catch (e) {
+            console.warn('[ScanTarget] Failed to save:', e)
+          }
+        } else {
+          appendLog(`[LLM] Analysis failed: ${llmResult.error}\n`)
+        }
+      } else {
+        appendLog('[Skip-Scan] No vulnerabilities to analyze\n')
+      }
+
+      setScanResult({ ...scanData })
+      setScanState('complete')
+      appendLog('[Skip-Scan] Done\n')
+    } catch (err) {
+      console.error('[ScanTarget] Skip-scan error:', err)
+      setScanError('Skip-scan failed: ' + (err instanceof Error ? err.message : String(err)))
+      setScanState('error')
+    }
+  }
+
   const validateTarget = async () => {
     if (!target.trim()) {
       setScanError('Please enter a target URL or IP')
       return
+    }
+
+    // Skip-scan shortcut: "!target" skips Nmap, reuses last scan
+    if (target.startsWith('!')) {
+      const realTarget = target.slice(1).trim()
+      if (!realTarget) {
+        setScanError('Enter a target after "!" (e.g. !testphp.vulnweb.com)')
+        return
+      }
+      return handleSkipScan(realTarget)
     }
 
     setScanState('validating')
@@ -256,6 +337,14 @@ export default function ScanTarget() {
             scanData.llmAnalysis = llmResult
             console.log(`[ScanTarget] LLM analysis complete: ${llmResult.analyses.length} analyses`)
             appendLog(`[LLM] Analysis complete: ${llmResult.analyses.length} vulnerabilities analyzed\n`)
+
+            // Persist enriched scan data (with LLM analysis + hallucination report) back to disk
+            try {
+              await window.electronAPI!.scanner.saveScan(scanData)
+              console.log('[ScanTarget] Saved enriched scan data to disk')
+            } catch (saveErr) {
+              console.warn('[ScanTarget] Failed to save scan data:', saveErr)
+            }
           } else {
             console.warn('[ScanTarget] LLM analysis failed:', llmResult.error)
             appendLog(`[LLM] Analysis failed: ${llmResult.error}\n`)

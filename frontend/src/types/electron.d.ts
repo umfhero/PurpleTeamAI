@@ -103,6 +103,48 @@ export interface HallucinationReport {
   overallTrustScore: number
 }
 
+// Hallucination Metrics types (empirical evaluation layer)
+export interface HallucinationMetricsEntry {
+  scanTimestamp: string
+  target: string
+  recordedAt: string
+  owaspDisagreementRate: number
+  owaspDisagreementCount: number
+  fabricatedCVECount: number
+  fabricatedCVEs: string[]
+  confidenceMismatchRate: number
+  confidenceMismatchCount: number
+  trustScore: number
+  totalAnalysed: number
+  lowRisk: number
+  mediumRisk: number
+  highRisk: number
+}
+
+export interface HallucinationMetricsAggregate {
+  totalScans: number
+  meanOwaspDisagreementRate: number
+  totalOwaspDisagreements: number
+  totalFabricatedCVEs: number
+  allFabricatedCVEs: string[]
+  scansWithFabricatedCVEs: number
+  meanConfidenceMismatchRate: number
+  totalConfidenceMismatches: number
+  meanTrustScore: number
+  minTrustScore: number
+  maxTrustScore: number
+  trustScoreDistribution: {
+    excellent: number
+    good: number
+    moderate: number
+    poor: number
+  }
+  totalLowRisk: number
+  totalMediumRisk: number
+  totalHighRisk: number
+  totalVulnsAnalysed: number
+}
+
 export interface LLMAnalysisRequest {
   vulnerabilities: Array<{
     id: string
@@ -223,6 +265,7 @@ export interface ElectronAPI {
     validateTarget: (target: string) => Promise<ValidationResult>
     abort: () => Promise<{ success: boolean; message: string }>
     deleteScan: (timestamp: string) => Promise<{ success: boolean; message?: string }>
+    saveScan: (scanData: NmapScanData) => Promise<{ success: boolean; error?: string }>
     onProgress: (callback: (line: string) => void) => () => void
     onPhaseResult: (callback: (data: NmapScanData) => void) => () => void
   }
@@ -240,6 +283,10 @@ export interface ElectronAPI {
     openFile: (filePath: string) => Promise<boolean>
     readPdf: (filePath: string) => Promise<{ success: boolean; data?: string; error?: string }>
     delete: (id: string, deleteFile: boolean) => Promise<boolean>
+  }
+  hallucination: {
+    getMetricsHistory: () => Promise<HallucinationMetricsEntry[]>
+    getMetricsAggregate: () => Promise<HallucinationMetricsAggregate>
   }
   versions: {
     node: string

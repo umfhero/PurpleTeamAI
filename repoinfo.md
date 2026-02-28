@@ -32,6 +32,15 @@ Target → Validate → Phase 1 Scan → Parse XML → Phase 2 Scan → Parse XM
 
 ---
 
+## targets
+
+testphp.vulnweb.com
+localhost
+https://juice-shop.herokuapp.com/#/
+https://google-gruyere.appspot.com/
+
+---
+
 ## Module Breakdown
 
 ### 1. Scanner Module — `electron/scanner/`
@@ -351,17 +360,121 @@ A controlled local environment (`test-site/`) is used to:
 
 This supports empirical evaluation of prioritisation, remediation guidance, and scoring behaviour.
 
-### 3. Empirical Hallucination Evaluation Layer
+### 3. Empirical Hallucination Evaluation Layer — ✅ IMPLEMENTED
 
-The hallucination guard will be extended with structured metric logging:
+The hallucination guard now includes structured metric persistence for quantitative analysis.
 
-- OWASP classification disagreement rate
-- Fabricated CVE detection count
-- Confidence mismatch frequency
-- Trust score distribution across scans
+**What it does:**
 
-Metrics will be persisted for quantitative analysis in Chapter 4.
-This allows empirical assessment of probabilistic AI behaviour under deterministic validation constraints.
+Every time the LLM analyzes vulnerabilities, the hallucination guard runs cross-validation checks and logs structured metrics to `data/hallucination-metrics.json`. This creates a longitudinal dataset tracking AI reliability across multiple scans.
+
+**Metrics tracked per scan:**
+
+| Metric                              | What it measures                                                                       | How it's calculated                                                           |
+| ----------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `owaspDisagreementRate`             | How often the AI's OWASP category differs from deterministic keyword matching          | (disagreement count) / (total vulnerabilities analyzed)                       |
+| `owaspDisagreementCount`            | Number of vulnerabilities where AI category ≠ keyword-matched category                 | Count of cross-validation failures                                            |
+| `fabricatedCVECount`                | Number of CVE references mentioned by AI that don't exist in scan data                 | Count of CVEs in AI output not found in original vulnerability data           |
+| `fabricatedCVEs`                    | Array of specific fabricated CVE IDs                                                   | List of invented CVE strings                                                  |
+| `confidenceMismatchRate`            | How often AI confidence (0-1) contradicts keyword-matcher confidence (high/medium/low) | (mismatch count) / (total analyzed)                                           |
+| `confidenceMismatchCount`           | Number of vulnerabilities with suspicious confidence levels                            | Count where AI reports high confidence but keyword matcher has low confidence |
+| `trustScore`                        | Overall reliability rating (0-100, higher = more trustworthy)                          | `100 - (highRisk × 25) - (mediumRisk × 10)`                                   |
+| `totalAnalysed`                     | Number of vulnerabilities processed in this scan                                       | Count of LLM analyses returned                                                |
+| `lowRisk`, `mediumRisk`, `highRisk` | Vulnerability counts by hallucination risk level                                       | Categorized by severity of detected hallucination flags                       |
+
+**Storage format:**
+
+```json
+[
+  {
+    "scanTimestamp": "2026-02-28T17:11:59.553Z",
+    "target": "testphp.vulnweb.com",
+    "recordedAt": "2026-02-28T17:11:59.553Z",
+    "owaspDisagreementRate": 0.625,
+    "owaspDisagreementCount": 5,
+    "fabricatedCVECount": 0,
+    "fabricatedCVEs": [],
+    "confidenceMismatchRate": 0.375,
+    "confidenceMismatchCount": 3,
+    "trustScore": 15,
+    "totalAnalysed": 8,
+    "lowRisk": 1,
+    "mediumRisk": 6,
+    "highRisk": 1
+  }
+]
+```
+
+**Pipeline integration:**
+
+1. User triggers LLM analysis on a completed scan
+2. Gemini API returns structured vulnerability analyses (plain English summaries, remediation steps, OWASP categories, confidence scores)
+3. Hallucination guard runs cross-validation:
+   - Compare AI's OWASP category vs keyword matcher's category
+   - Check if AI mentions CVEs not in the scan data
+   - Validate AI confidence against deterministic confidence
+4. Metrics are computed and appended to `hallucination-metrics.json`
+5. Results are also embedded in the scan JSON file under `llmAnalysis.hallucinationReport`
+
+**Technical implementation:**
+
+- **Module:** `frontend/electron/analysis/hallucination-metrics.ts`
+- **API:** `window.electronAPI.hallucination.getMetricsHistory()` returns all saved metrics
+- **Persistence:** IPC handler in `main.ts` writes metrics after every LLM analysis via `hallucinationMetrics.saveMetrics()`
+- **Format:** JSON array, chronologically appended (oldest first)
+
+**Purpose:**
+
+This creates an empirical dataset for Chapter 4 dissertation analysis, enabling quantitative assessment of:
+
+- How often probabilistic AI output deviates from deterministic analysis
+- Whether cross-validation constraints reduce hallucination frequency
+- The reliability distribution across different vulnerability types/severities
+- Trust score correlation with actual remediation success (if combined with delta scan data)
+
+**LLM Analysis Enhancement:**
+
+The AI analysis pipeline enriches each vulnerability with:
+
+- **Plain English summary** (2-3 sentences explaining what the vulnerability means in human terms)
+- **Affected endpoints** (specific paths/URLs where the vulnerability exists)
+- **Severity justification** (why this severity rating was assigned)
+- **3 remediation steps** (actionable fixes prioritized by effectiveness)
+- **OWASP category** (AI's classification, cross-validated against keyword matching)
+- **Confidence score** (0-1, AI's self-reported certainty in the analysis)
+
+This transforms raw Nmap/NSE script output into actionable intelligence suitable for non-technical stakeholders, while the hallucination guard ensures accuracy.
+
+**Technical constraints:**
+
+- **API timeout:** 120 seconds (Gemini can take 30-90s for 8+ vulnerability analyses)
+- **Max output tokens:** 16,384 tokens (~49,000-65,000 characters)
+- **Practical limit:** ~50 vulnerability analyses per request before hitting token limits
+- **Scaling strategy:** For scans with 50+ vulnerabilities, batch processing would be needed (send 20-30 at a time)
+- **Model:** `gemini-2.5-flash` (primary) with 4-model fallback chain (`gemini-2.5-flash-lite`, `gemini-2.0-flash`, `gemini-2.0-flash-lite`)
+- **API keys:** Dual key rotation (2 Gemini API keys in `.env`) to work around daily quota limits
+
+**The Fix (token truncation bug):**
+
+Initial implementation used `maxOutputTokens: 4096`, causing Gemini to truncate responses mid-JSON after ~3 of 8 vulnerability analyses. The parser correctly failed because the JSON was incomplete (e.g., `[{...}, {....` without closing `]`). Increased to `16,384 tokens` and timeout from `30s` to `120s`.
+
+**The Math:**
+
+- **16,384 tokens** ≈ 49,000-65,000 characters (tokenizer-dependent)
+- Each analysis averages **~1,300 characters** (observed: 10,457 chars ÷ 8 vulns = 1,307 chars/vuln)
+- **Theoretical capacity:** ~37-50 vulnerabilities per single request
+- **Typical usage:** Most web app scans yield 5-20 findings (well within limits)
+
+**Scaling for Additional Scanners:**
+
+When adding Nikto, OWASP ZAP, or other scanners, vulnerability counts may exceed 50+. Implement batch processing in `gemini.ts`'s `analyzeVulnerabilities()`:
+
+1. Chunk vulnerabilities into batches of 30 (safe margin below the ~50 limit)
+2. Send each batch sequentially to Gemini
+3. Aggregate all analyses arrays before returning
+4. Hallucination guard processes the combined results normally
+
+This maintains the same API contract while handling arbitrary vulnerability counts. No UI changes needed — batching is transparent to the renderer.
 
 ### 4. Exploitability-Aware Risk Weighting
 

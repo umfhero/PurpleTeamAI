@@ -5,6 +5,7 @@ import type { NmapScanData, VulnerabilityResult } from '../types/electron.d'
 import type { TargetGroup, ScanDeltaChain } from '../types/delta'
 import SecurityScoreCard from '../components/SecurityScoreCard'
 import OWASPCoverageMatrix from '../components/OWASPCoverageMatrix'
+import HallucinationMetricsPanel from '../components/HallucinationMetricsPanel'
 import NotificationBadge from '../components/NotificationBadge'
 import { useResizablePanel } from '../lib/useResizablePanel'
 
@@ -384,6 +385,12 @@ export default function Dashboard() {
                                     coverage={selectedScan.owaspCoverage}
                                     distribution={selectedScan.owaspDistribution}
                                 />
+                            </div>
+                        )}
+
+                        {selectedScan?.llmAnalysis?.hallucinationReport && (
+                            <div className="border-b border-border">
+                                <HallucinationMetricsPanel selectedScanTimestamp={selectedScan?.timestamp} />
                             </div>
                         )}
 

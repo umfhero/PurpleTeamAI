@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     validateTarget: (target) => ipcRenderer.invoke('scanner:validate-target', target),
     abort: () => ipcRenderer.invoke('scanner:abort'),
     deleteScan: (timestamp) => ipcRenderer.invoke('scanner:delete-scan', timestamp),
+    saveScan: (scanData) => ipcRenderer.invoke('scanner:save-scan', scanData),
     onProgress: (callback) => {
       const listener = (_event, line) => callback(line)
       ipcRenderer.on('scanner:progress', listener)
@@ -41,6 +42,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openFile: (filePath) => ipcRenderer.invoke('report:open-file', filePath),
     readPdf: (filePath) => ipcRenderer.invoke('report:read-pdf', filePath),
     delete: (id, deleteFile) => ipcRenderer.invoke('report:delete', id, deleteFile),
+  },
+
+  // Hallucination Metrics APIs
+  hallucination: {
+    getMetricsHistory: () => ipcRenderer.invoke('hallucination:get-metrics-history'),
+    getMetricsAggregate: () => ipcRenderer.invoke('hallucination:get-metrics-aggregate'),
   },
 
   // App info

@@ -37,6 +37,7 @@ export interface LLMAnalysisResult {
 
 export interface GeminiConfig {
   apiKey: string
+  fallbackApiKey?: string
   model?: string
   maxRetries?: number
   timeout?: number

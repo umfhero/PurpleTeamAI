@@ -6,6 +6,7 @@ import { runNmapScan, getScanHistory, validateTarget, abortScan, deleteScan } fr
 import { GeminiClient } from './llm'
 import { exportReport } from './reports'
 import { generateHallucinationReport } from './analysis/hallucination-guard'
+import { extractMetrics, saveMetricsEntry, loadMetricsHistory, aggregateMetrics } from './analysis/hallucination-metrics'
 import { groupScansByTarget, computeAllDeltas } from './analysis/delta-comparison'
 import type { LLMAnalysisRequest } from './llm'
 import type { ReportOptions } from './reports'
@@ -23,6 +24,7 @@ config({ path: envPath })
 
 console.log('[Main] Environment loaded from:', envPath)
 console.log('[Main] GEMINI_API_KEY present:', !!process.env.GEMINI_API_KEY)
+// Perplexity removed — Pro plan requires credits
 
 // Paths
 const RENDERER_DIST = path.join(__dirname, '../dist')
@@ -111,6 +113,34 @@ app.on('window-all-closed', () => {
 })
 
 // ============================================
+// Helpers
+// ============================================
+
+/**
+ * Find a scan JSON file by matching the `timestamp` field inside each file.
+ * The filename uses scan-start time but the timestamp field is scan-completion time,
+ * so we can't match by filename alone.
+ */
+async function findScanFileByTimestamp(scansDir: string, timestamp: string): Promise<string | null> {
+  const fsP = await import('node:fs/promises')
+  const files = await fsP.readdir(scansDir)
+  const jsonFiles = files.filter(f => f.endsWith('.json'))
+
+  for (const file of jsonFiles) {
+    try {
+      const content = await fsP.readFile(path.join(scansDir, file), 'utf-8')
+      const data = JSON.parse(content)
+      if (data.timestamp === timestamp) {
+        return file
+      }
+    } catch {
+      // Skip unparseable files
+    }
+  }
+  return null
+}
+
+// ============================================
 // IPC Handlers - Window controls
 // ============================================
 
@@ -193,6 +223,32 @@ ipcMain.handle('scanner:get-deltas', async (_event, target: string) => {
   return computeAllDeltas(targetScans)
 })
 
+// Save updated scan data (e.g. after LLM analysis enrichment)
+ipcMain.handle('scanner:save-scan', async (_event, scanData: any) => {
+  if (!scanData?.timestamp) {
+    console.error('[IPC] save-scan: missing timestamp')
+    return { success: false, error: 'Missing scan timestamp' }
+  }
+  try {
+    const SCANS_DIR = path.join(process.cwd(), 'data', 'scans')
+    const fs = await import('node:fs/promises')
+    const matchedFile = await findScanFileByTimestamp(SCANS_DIR, scanData.timestamp)
+    if (!matchedFile) {
+      // No existing file found — create new one
+      const safeName = `scan-${scanData.timestamp.replace(/[:.]/g, '-').slice(0, 23)}Z.json`
+      await fs.writeFile(path.join(SCANS_DIR, safeName), JSON.stringify(scanData, null, 2))
+      console.log(`[IPC] save-scan: created new file ${safeName}`)
+      return { success: true }
+    }
+    await fs.writeFile(path.join(SCANS_DIR, matchedFile), JSON.stringify(scanData, null, 2))
+    console.log(`[IPC] save-scan: updated ${matchedFile}`)
+    return { success: true }
+  } catch (error) {
+    console.error('[IPC] save-scan error:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+})
+
 // ============================================
 // IPC Handlers - LLM Analysis
 // ============================================
@@ -202,17 +258,22 @@ ipcMain.handle('llm:analyze-vulnerabilities', async (_event, request: LLMAnalysi
   console.log(`[IPC] Received LLM analysis request for ${request.vulnerabilities.length} vulnerabilities`)
 
   try {
-    // Get API key from environment
+    // Get API keys from environment
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY not found in environment variables')
     }
+    const fallbackApiKey = process.env.GEMINI_API_KEY2 || undefined
+    if (fallbackApiKey) {
+      console.log('[IPC] Gemini: 2 API keys available')
+    }
 
-    const client = new GeminiClient({ apiKey })
+    const client = new GeminiClient({ apiKey, fallbackApiKey })
     const result = await client.analyzeVulnerabilities(request)
 
     // Run hallucination guard: cross-validate AI output against scan data
     if (result.success && result.analyses.length > 0) {
+      console.log(`[IPC] LLM analysis succeeded with ${result.analyses.length} analyses — running hallucination guard...`)
       const vulns = request.vulnerabilities.map(v => ({
         id: v.id,
         cve: v.cve,
@@ -226,9 +287,38 @@ ipcMain.handle('llm:analyze-vulnerabilities', async (_event, request: LLMAnalysi
       const hallucinationReport = generateHallucinationReport(vulns, result.analyses)
       result.hallucinationReport = hallucinationReport
       console.log(`[IPC] Hallucination guard: trust=${hallucinationReport.overallTrustScore}/100, high-risk=${hallucinationReport.highRisk}, medium-risk=${hallucinationReport.mediumRisk}, low-risk=${hallucinationReport.lowRisk}`)
+
+      // Persist hallucination metrics for empirical analysis
+      console.log('[IPC] Saving hallucination metrics...')
+      const metricsEntry = extractMetrics(hallucinationReport, request.scanTimestamp, request.target)
+      await saveMetricsEntry(metricsEntry)
+      console.log('[IPC] Hallucination metrics saved successfully')
+
+      // Also persist LLM results directly into the scan JSON file
+      // so the data survives page reloads without needing a frontend roundtrip
+      try {
+        const SCANS_DIR = path.join(process.cwd(), 'data', 'scans')
+        const fsP = await import('node:fs/promises')
+        const matchedFile = await findScanFileByTimestamp(SCANS_DIR, request.scanTimestamp)
+        if (matchedFile) {
+          const filePath = path.join(SCANS_DIR, matchedFile)
+          const content = await fsP.readFile(filePath, 'utf-8')
+          const scanJson = JSON.parse(content)
+          scanJson.llmAnalysis = result
+          await fsP.writeFile(filePath, JSON.stringify(scanJson, null, 2))
+          console.log(`[IPC] LLM results persisted to ${matchedFile}`)
+        } else {
+          console.warn(`[IPC] Could not find scan file for timestamp: ${request.scanTimestamp}`)
+        }
+      } catch (persistErr) {
+        console.error('[IPC] Failed to persist LLM results to scan file:', persistErr)
+      }
     }
 
-    console.log(`[IPC] LLM analysis complete: ${result.success ? 'success' : 'failed'}`)
+    console.log(`[IPC] LLM analysis complete: ${result.success ? 'success' : 'failed'}, analyses: ${result.analyses?.length ?? 0}`)
+    if (!result.success) {
+      console.warn(`[IPC] LLM analysis was not successful: ${result.error || 'no error message'}`)
+    }
     return result
   } catch (error) {
     console.error('[IPC] LLM analysis error:', error)
@@ -376,4 +466,19 @@ ipcMain.handle('report:export-delta', async (_event, olderTimestamp: string, new
     console.error('[IPC] Delta report export error:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
+})
+
+// ============================================
+// IPC Handlers - Hallucination Metrics
+// ============================================
+
+// Get full metrics history
+ipcMain.handle('hallucination:get-metrics-history', async () => {
+  return loadMetricsHistory()
+})
+
+// Get aggregated metrics
+ipcMain.handle('hallucination:get-metrics-aggregate', async () => {
+  const entries = await loadMetricsHistory()
+  return aggregateMetrics(entries)
 })
