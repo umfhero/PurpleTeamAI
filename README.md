@@ -1,188 +1,61 @@
+<p align="center">
+  <img src="frontend/public/icon.png" alt="PurpleTeamAI" width="120" />
+</p>
+
 # PurpleTeamAI
 
-**Automating the Purple Team Lifecycle: An Integrated Framework for AI-Assisted Vulnerability Discovery and Autonomous Remedy**
-
-![Electron](https://img.shields.io/badge/Electron-191970?style=for-the-badge&logo=Electron&logoColor=white)
-![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
-![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
-![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Google Gemini](https://img.shields.io/badge/Google%20Gemini-886FBF?style=for-the-badge&logo=googlegemini&logoColor=white)
-![Nmap](https://img.shields.io/badge/Nmap-4682B4?style=for-the-badge&logo=nmap&logoColor=white)
-
-[![Node.js](https://img.shields.io/badge/node.js-18+-339933.svg)](https://nodejs.org/)
-[![React](https://img.shields.io/badge/react-19-blue.svg)](https://reactjs.org/)
-[![Electron](https://img.shields.io/badge/electron-latest-47848F.svg)](https://www.electronjs.org/)
-[![Gemini API](https://img.shields.io/badge/gemini-api-886FBF.svg)](https://ai.google.dev/)
-
-</div>
-
----
+**Automating the Purple Team Lifecycle. An Integrated Framework for AI Assisted Vulnerability Discovery and Autonomous Remedy.**
 
 ## About
 
-PurpleTeamAI is a dissertation project that addresses a critical gap in modern application security workflows. As organizations increasingly adopt rapid development practices like "vibe coding" and AI-assisted development, they accelerate software delivery but simultaneously introduce common security weaknesses that often go undetected until production.
+PurpleTeamAI is a dissertation project built to close a persistent gap in application security workflows. As organisations increasingly adopt rapid development practices and AI assisted code generation, they accelerate delivery while simultaneously introducing common security weaknesses that remain undetected until production. Purple teaming, the collaborative security discipline that combines offensive red team validation with defensive blue team priorities, offers a response to this problem by continuously testing detection capabilities and measuring response effectiveness, but the traditional approach suffers from significant operational friction because manual triage creates bottlenecks, scanners produce noisy output demanding expert interpretation, and remediation guidance is often too generic to be immediately actionable.
 
-**Purple teaming** — the collaborative security approach that combines offensive red team validation with defensive blue team priorities — offers a solution by continuously testing detection capabilities and response effectiveness. However, traditional purple team operations suffer from significant operational friction: manual triage of security findings creates bottlenecks, vulnerability scanners produce noisy outputs that require expert interpretation, and remediation guidance is often inconsistent or too generic to be immediately actionable by development teams.
+This project implements an integrated framework that automates critical segments of that lifecycle. The system orchestrates reconnaissance and vulnerability scanning through Nmap, collects raw security data, normalises it into structured formats, and passes it to Google's Gemini large language model to transform technical scanner output into plain English analysis with specific remediation steps. Every finding is mapped deterministically to OWASP Top 10 categories before the AI processes it, and every AI response is cross validated against that ground truth by a dedicated hallucination guard that flags disagreements, invented CVE references, and suspicious confidence levels.
 
-This project proposes and implements an integrated framework that automates critical segments of the purple team lifecycle. The system orchestrates reconnaissance and vulnerability scanning tasks, collects raw security data, and leverages large language models to transform technical scan outputs into structured, actionable intelligence.
+## Technical Overview
 
----
+The implementation is a cross platform Electron desktop application with a React 19 frontend written in TypeScript and styled with Tailwind CSS using a dark brutalist design system. The backend logic runs in Electron's main process and communicates with the renderer through a strict IPC bridge where context isolation is enabled and node integration is disabled, meaning the UI cannot access the filesystem or spawn processes directly and only pre approved IPC channels are exposed through the preload script.
 
-## Key Capabilities
+The scanning pipeline follows a linear sequence where each module's output becomes the next module's input. A user submitted target URL is first validated against an allowlist of approved targets, then Nmap runs a progressive two phase scan where Phase 1 covers the top 100 ports for fast initial results while Phase 2 scans all 65,535 ports in the background. Raw XML output is parsed into structured JSON, the two phases are merged with deduplication, vulnerabilities are mapped to OWASP Top 10 categories through deterministic keyword matching with weighted scoring and confidence tiers, a security score from 0 to 100 is calculated with severity weighted deductions and OWASP breadth penalties, and finally the compressed vulnerability data is sent to Google Gemini for plain English analysis and remediation guidance. A post analysis hallucination guard then cross validates every AI output against the deterministic mappings and flags discrepancies with per vulnerability risk levels and an overall trust score.
 
-The framework performs four core operations:
+The application also supports delta comparison between consecutive scans of the same target. Vulnerabilities are fingerprinted using stable identity keys derived from CVE and port combinations so that the same finding across different scans is recognised regardless of internal ID changes. Each vulnerability is classified as resolved, new, or persisting, and score changes together with OWASP coverage shifts are computed to provide measurable post remediation reassessment across the full scan lifecycle.
 
-1. **Vulnerability Condensation** — Condenses verbose scanner results into clear vulnerability statements
-2. **Endpoint Identification** — Identifies affected endpoints and code paths
-3. **Contextual Severity Assessment** — Assesses severity ratings based on context
-4. **Remediation Guidance** — Generates specific, actionable remediation guidance tailored to each finding
+## Module Architecture
 
-Additionally, the system maps all discovered vulnerabilities to **OWASP Top 10** categories, providing security teams with coverage metrics that highlight gaps in their defensive posture.
+The codebase is organised into four backend modules under the electron directory, each with its own folder, type definitions, and barrel export.
 
----
+The Scanner module orchestrates Nmap as a child process, handles the two phase progressive scan with live progress streaming to the UI via IPC, parses XML output into typed JSON, adds post processing detections for missing security headers and absent HTTPS, filters negative results automatically, and persists scan history to disk as timestamped JSON files. It also handles target normalisation by stripping URL schemes and extracting explicit ports, and on Windows it automatically switches from SYN scan to TCP connect scan because Nmap's default SYN scan fails on the Windows loopback adapter. Scanning can be aborted mid execution and is restricted to approved targets through a JSON allowlist.
 
-## Architecture
+The Analysis module performs all deterministic computation without external calls. It contains the OWASP mapper which matches vulnerabilities against expanded keyword vocabularies with weighted scoring, regex special cases for common vulnerability patterns, and a fallback chain for unmatched findings. The security scorer calculates a 0 to 100 score with weighted severity deductions, OWASP breadth penalties, a remediation bonus for completed pipeline runs, and a separate confidence calculation that warns when scanners found suspiciously little. The hallucination guard cross validates AI output against scan data by checking OWASP category agreement, verifying CVE references exist in the scan results, and comparing confidence levels proportionally rather than through simple binary checks. The delta comparison engine computes resolved, new, and persisting vulnerability classifications between sequential scans and supports chain computation across multiple assessment cycles for full lifecycle tracking.
 
-The implementation consists of a cross-platform **Electron** desktop application with a **React**-based user interface, backed by a **Node.js** runtime that orchestrates security tooling.
+The LLM module manages communication with Google Gemini. It compresses vulnerability data to essential fields before transmission, enforces structured JSON output through prompt engineering with explicit OWASP categorisation rules, uses a low temperature of 0.2 to minimise creative hallucination, implements retry logic with backoff on rate limits, and falls back through a model cascade if the primary model fails. Each vulnerability receives a plain English summary, affected endpoints, severity justification, three remediation steps, an OWASP category, and a confidence score. For larger scan results the module batches vulnerabilities transparently to stay within token limits.
 
-### Scanning Pipeline
+The Reports module generates three styles of professional PDF report. An assessment report styled with a dark theme for internal review, a pentest style report with a light theme, cover page, table of contents, and executive summary for client facing use, and a delta comparison report that presents differences between two sequential scans with score changes, resolved and new findings, OWASP coverage shifts, and auto generated narrative conclusions. Reports are cached on disk to avoid regeneration and persisted with metadata for retrieval through the reports page.
 
-```
-Nmap Reconnaissance → JSON Normalization → LLM Analysis (Gemini API) → Structured Report
-```
+## Anti Hallucination Strategy
 
-1. **Nmap** performs initial reconnaissance and vulnerability scanning
-2. Outputs are processed and normalized into structured **JSON** format
-3. Structured data is passed to the **LLM analysis module** powered by Google's Gemini API (with fallback support for local Ollama models)
-4. The application produces condensed security reports integrating scan findings, vulnerability classifications, and prioritized remediation steps
+The system addresses AI reliability through multiple complementary layers rather than relying on a single validation mechanism. Deterministic keyword matching categorises vulnerabilities before the AI sees them, establishing ground truth that the AI cannot override. The prompt constrains output to a fixed JSON schema with typed enums so the model cannot invent OWASP categories outside the A01 to A10 range. Data compression ensures only scanner verified data reaches the model, preventing speculation about unseen systems. After the AI responds, the hallucination guard cross validates every output, flagging OWASP category disagreements, fabricated CVE references not present in scan data, and confidence levels that diverge significantly from the deterministic assessment. The guard produces a trust score from 0 to 100 using a weighted formula where fabricated CVEs incur severe penalties while subjective labelling differences are treated proportionally. All metrics are logged to a longitudinal dataset after every analysis run, tracking OWASP disagreement rates, fabricated CVE counts, confidence mismatch rates, and overall trust scores across scans for empirical evaluation of AI reliability over time.
 
-### Technology Stack
+## Evaluation Approach
 
-| Layer              | Technology                                           |
-| ------------------ | ---------------------------------------------------- |
-| **Desktop Shell**  | Electron.js                                          |
-| **User Interface** | React 19, TypeScript, Tailwind CSS                   |
-| **Build Tooling**  | Vite                                                 |
-| **Scanning**       | Nmap                                                 |
-| **LLM Analysis**   | Google Gemini API (primary), Ollama (local fallback) |
-| **Output Format**  | Structured JSON, condensed security reports          |
+The framework is evaluated across three dimensions. Classification correctness measures the system's ability to accurately identify vulnerabilities by comparing detected findings against ground truth expectations from training targets with known vulnerability profiles, calculating true positive and false positive rates. Remediation suggestion quality is scored against a structured rubric assessing completeness, accuracy, actionability, and relevance. OWASP category coverage tracks how comprehensively the framework identifies vulnerabilities across all ten categories, revealing systematic gaps in detection.
 
----
+A controlled localhost test environment supports empirical evaluation by providing a deliberately vulnerable Express server with twelve intentional findings spanning missing security headers, absent HTTPS, CSRF weaknesses, reflected and DOM based XSS, insecure cookies, exposed directories and backup files, open redirects, and basic authentication panels. These vulnerabilities can be selectively remediated between scan cycles, enabling measurement of score improvement, vulnerability reduction, and delta comparison behaviour under controlled conditions where the ground truth is fully known.
 
-## Project Structure
+## Getting Started
+
+The project requires Node.js 18 or later, Git, Nmap installed on the host system, and a Google Gemini API key stored in a .env file at the frontend root. Ollama can serve as a local fallback if the Gemini API is unavailable.
 
 ```
-PurpleTeamAI/
-├── frontend/                  # Electron + React application
-│   ├── src/
-│   │   ├── components/        # React UI components
-│   │   ├── pages/             # Application pages
-│   │   ├── lib/               # Utilities and helpers
-│   │   ├── App.tsx            # Root application component
-│   │   └── main.tsx           # Application entry point
-│   ├── public/                # Static assets
-│   ├── package.json           # Dependencies and scripts
-│   └── vite.config.ts         # Vite build configuration
-│
-├── assets/                    # Project assets (banners, images)
-├── .gitignore
-└── README.md
-```
-
-> **Note**: The Electron main process, preload scripts, and scanning/LLM modules will be added as development progresses.
-
----
-
-## Development Environment
-
-- **OS**: Windows 11 with Kali Linux virtual machines for security-focused tooling
-- **Containers**: Docker for local deployment of intentionally vulnerable applications
-- **Testing Targets**: [testphp.vulnweb.com](http://testphp.vulnweb.com) and locally deployed Mutillidae instances
-
-### Prerequisites
-
-- **Node.js** 18+ and npm
-- **Git**
-- **Nmap** ([download](https://nmap.org/download.html))
-- **Google Gemini API Key** ([get one](https://ai.google.dev/)) or **Ollama** ([download](https://ollama.ai/)) for local LLMs
-- **Docker** (for running vulnerable test targets locally)
-
-### Getting Started
-
-```bash
-# Clone the repository
-git clone <repository-url>
+git clone <repository url>
 cd PurpleTeamAI
-
-# Install frontend dependencies
 cd frontend
 npm install
-
-# Start the development server
 npm run dev
 ```
 
----
+## Ethical Constraints
 
-## Ethical Considerations
+All scanning is confined to authorised environments. Testing is performed exclusively against the publicly available vulnerable training platform testphp.vulnweb.com, locally deployed instances of Mutillidae in isolated Docker containers, and the included localhost test server. No personal data is collected or processed. The codebase enforces a target allowlist and requires user confirmation before initiating any scan.
 
-All testing activities are **strictly confined to authorized environments**:
-
-- Testing is performed exclusively against publicly available vulnerable training platforms ([testphp.vulnweb.com](http://testphp.vulnweb.com)) and locally deployed instances of **Mutillidae** running in isolated Docker containers
-- **No personal data** is collected, stored, or processed — all outputs are limited to technical scan results and vulnerability metadata
-- Safe operating procedures are documented to prevent accidental scanning of unauthorized targets
-- The codebase includes safeguards such as **target allowlists** and **user confirmation prompts** before initiating any scanning activities
-
----
-
-## Evaluation Methodology
-
-The framework is evaluated using three complementary metrics:
-
-### Classification Correctness
-
-Measures the system's ability to accurately identify vulnerabilities by comparing detected findings against ground-truth expectations from training targets with known vulnerabilities, calculating true positive and false positive rates.
-
-### Remediation Suggestion Quality
-
-Scored using a structured rubric evaluating:
-
-- **Completeness** — Does the guidance address the root cause?
-- **Accuracy** — Is the technical advice correct?
-- **Actionability** — Can a developer apply it without additional research?
-- **Relevance** — Is it specific to the vulnerability context?
-
-### OWASP Category Coverage
-
-Tracks how comprehensively the framework identifies vulnerabilities across the OWASP Top 10 classification system, revealing systematic gaps in detection capabilities.
-
----
-
-## Project Timeline
-
-This project spans **10 weeks** from development start to final submission (April 24, 2026):
-
-| Week                 | Focus                                                                             |
-| -------------------- | --------------------------------------------------------------------------------- |
-| **Week 1** (Feb 9)   | Foundation — Electron shell, Nmap verified, Mutillidae in Docker                  |
-| **Week 2** (Feb 16)  | Scanning pipeline — target input, Nmap orchestration, JSON normalization          |
-| **Week 3** (Feb 23)  | Results dashboard — vulnerability table, scan history, literature review complete |
-| **Week 4** (Mar 2)   | LLM integration — Gemini API analysis, remediation guidance                       |
-| **Week 5** (Mar 9)   | OWASP mapping + security score (0–100%)                                           |
-| **Week 6** (Mar 16)  | Report export + UI polish (brutalist design system)                               |
-| **Week 7** (Mar 23)  | Testing both targets, Ollama fallback, accuracy validation                        |
-| **Week 8** (Mar 30)  | Evaluation metrics — classification, remediation quality, OWASP coverage          |
-| **Week 9** (Apr 6)   | Dissertation writing + screencast recording                                       |
-| **Week 10** (Apr 13) | Final polish + submission (deadline: April 24)                                    |
-
-
----
-
-## Acknowledgements
-
-Built to advance the field of automated security operations and collaborative purple team workflows. This research contributes practical knowledge to both cybersecurity and software engineering domains by demonstrating that large language models can effectively bridge the gap between raw security scanner output and actionable remediation guidance.
-
----
-
-**Status**: In Active Development
-**Last Updated**: February 2026
+**Status.** In active development as of March 2026.
