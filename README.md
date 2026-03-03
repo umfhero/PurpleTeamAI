@@ -1,6 +1,3 @@
-<div align="center">
-  <img src="assets/Banner.png" alt="PurpleTeamAI Banner" width="100%" />
-
 # PurpleTeamAI
 
 **Automating the Purple Team Lifecycle: An Integrated Framework for AI-Assisted Vulnerability Discovery and Autonomous Remedy**
