@@ -58,4 +58,4 @@ npm run dev
 
 All scanning is confined to authorised environments. Testing is performed exclusively against the publicly available vulnerable training platform testphp.vulnweb.com, locally deployed instances of Mutillidae in isolated Docker containers, and the included localhost test server. No personal data is collected or processed. The codebase enforces a target allowlist and requires user confirmation before initiating any scan.
 
-**Status.** In active development as of March 2026.
+**Status.** In active development as of Feb 2026.
