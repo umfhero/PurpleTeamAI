@@ -8,6 +8,7 @@ import { exportReport } from './reports'
 import { generateHallucinationReport } from './analysis/hallucination-guard'
 import { extractMetrics, saveMetricsEntry, loadMetricsHistory, aggregateMetrics } from './analysis/hallucination-metrics'
 import { groupScansByTarget, computeAllDeltas } from './analysis/delta-comparison'
+import { FEATURE_TOGGLES, getToggleSnapshot } from './analysis/feature-toggles'
 import type { LLMAnalysisRequest } from './llm'
 import type { ReportOptions } from './reports'
 
@@ -257,6 +258,17 @@ ipcMain.handle('scanner:save-scan', async (_event, scanData: any) => {
 ipcMain.handle('llm:analyze-vulnerabilities', async (_event, request: LLMAnalysisRequest) => {
   console.log(`[IPC] Received LLM analysis request for ${request.vulnerabilities.length} vulnerabilities`)
 
+  // Ablation: when AI analysis is disabled, skip Gemini call entirely
+  if (!FEATURE_TOGGLES.aiAnalysis) {
+    console.log('[IPC] AI analysis disabled via feature toggle — returning empty result')
+    return {
+      success: true,
+      analyses: [],
+      error: undefined,
+      featureToggles: getToggleSnapshot(),
+    }
+  }
+
   try {
     // Get API keys from environment
     const apiKey = process.env.GEMINI_API_KEY
@@ -273,26 +285,39 @@ ipcMain.handle('llm:analyze-vulnerabilities', async (_event, request: LLMAnalysi
 
     // Run hallucination guard: cross-validate AI output against scan data
     if (result.success && result.analyses.length > 0) {
-      console.log(`[IPC] LLM analysis succeeded with ${result.analyses.length} analyses — running hallucination guard...`)
-      const vulns = request.vulnerabilities.map(v => ({
-        id: v.id,
-        cve: v.cve,
-        title: v.title,
-        description: v.description,
-        severity: v.severity as 'critical' | 'high' | 'medium' | 'low' | 'info',
-        port: v.port,
-        service: v.service,
-        output: v.output
-      }))
-      const hallucinationReport = generateHallucinationReport(vulns, result.analyses)
-      result.hallucinationReport = hallucinationReport
-      console.log(`[IPC] Hallucination guard: trust=${hallucinationReport.overallTrustScore}/100, high-risk=${hallucinationReport.highRisk}, medium-risk=${hallucinationReport.mediumRisk}, low-risk=${hallucinationReport.lowRisk}`)
+      if (!FEATURE_TOGGLES.hallucinationGuard) {
+        // Ablation: skip validation, return neutral report
+        console.log('[IPC] Hallucination guard disabled via feature toggle — returning neutral report')
+        result.hallucinationReport = {
+          totalAnalysed: result.analyses.length,
+          lowRisk: 0,
+          mediumRisk: 0,
+          highRisk: 0,
+          flags: [],
+          overallTrustScore: 100,
+        }
+      } else {
+        console.log(`[IPC] LLM analysis succeeded with ${result.analyses.length} analyses — running hallucination guard...`)
+        const vulns = request.vulnerabilities.map(v => ({
+          id: v.id,
+          cve: v.cve,
+          title: v.title,
+          description: v.description,
+          severity: v.severity as 'critical' | 'high' | 'medium' | 'low' | 'info',
+          port: v.port,
+          service: v.service,
+          output: v.output
+        }))
+        const hallucinationReport = generateHallucinationReport(vulns, result.analyses)
+        result.hallucinationReport = hallucinationReport
+        console.log(`[IPC] Hallucination guard: trust=${hallucinationReport.overallTrustScore}/100, high-risk=${hallucinationReport.highRisk}, medium-risk=${hallucinationReport.mediumRisk}, low-risk=${hallucinationReport.lowRisk}`)
 
-      // Persist hallucination metrics for empirical analysis
-      console.log('[IPC] Saving hallucination metrics...')
-      const metricsEntry = extractMetrics(hallucinationReport, request.scanTimestamp, request.target)
-      await saveMetricsEntry(metricsEntry)
-      console.log('[IPC] Hallucination metrics saved successfully')
+        // Persist hallucination metrics for empirical analysis
+        console.log('[IPC] Saving hallucination metrics...')
+        const metricsEntry = extractMetrics(hallucinationReport, request.scanTimestamp, request.target)
+        await saveMetricsEntry(metricsEntry)
+        console.log('[IPC] Hallucination metrics saved successfully')
+      }
 
       // Also persist LLM results directly into the scan JSON file
       // so the data survives page reloads without needing a frontend roundtrip

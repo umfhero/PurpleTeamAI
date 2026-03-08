@@ -112,6 +112,29 @@ export default function SecurityScoreCard({ score }: SecurityScoreCardProps) {
               <span className="text-primary">+{score.breakdown.remediationPotential}</span>
             </div>
           )}
+
+          {/* Contextual weighting summary (Extension 4) */}
+          {score.contextualWeightingEnabled && score.contextualWeighting && (
+            <div className="mt-1 pt-2 border-t border-border/50 space-y-1">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-foreground/50 mb-1">
+                Contextual Weighting
+              </div>
+              <div className="flex justify-between items-center font-mono text-xs">
+                <span className="text-foreground/70">Base deductions</span>
+                <span className="text-foreground/60">−{score.contextualWeighting.totalBaseDeductions}</span>
+              </div>
+              <div className="flex justify-between items-center font-mono text-xs">
+                <span className="text-foreground/70">Adjusted deductions</span>
+                <span className="text-critical">−{score.contextualWeighting.totalAdjustedDeductions}</span>
+              </div>
+              {score.contextualWeighting.tlsPenaltyApplied && (
+                <div className="flex justify-between items-center font-mono text-xs">
+                  <span className="text-foreground/70">TLS absence penalty</span>
+                  <span className="text-high">−8</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Vulnerability counts */}

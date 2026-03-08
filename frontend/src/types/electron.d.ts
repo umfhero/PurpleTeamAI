@@ -170,6 +170,26 @@ export interface OWASPCoverage {
 }
 
 // Security Score types
+export interface ContextualFactors {
+  portExposure: number
+  serviceExposure: number
+  authWeakness: number
+  combined: number
+}
+
+export interface ContextualWeightingSummary {
+  tlsPenaltyApplied: boolean
+  totalBaseDeductions: number
+  totalAdjustedDeductions: number
+}
+
+export interface VulnerabilityContextualDetail {
+  vulnerabilityId: string
+  baseDeduction: number
+  adjustedDeduction: number
+  contextualFactors: ContextualFactors
+}
+
 export interface SecurityScore {
   overall: number // 0-100
   grade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F'
@@ -180,6 +200,9 @@ export interface SecurityScore {
     owaspCoverage: number
     remediationPotential: number
   }
+  contextualWeightingEnabled: boolean
+  contextualWeighting?: ContextualWeightingSummary
+  vulnerabilityContextDetails?: VulnerabilityContextualDetail[]
   details: {
     totalVulnerabilities: number
     critical: number

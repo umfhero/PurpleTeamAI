@@ -1,5 +1,2 @@
-Get a current state of the app. How does it work, visual (mermaid) if possible. 
+If you are uncertain about whether the refinements are actually working as intended, the most useful thing you can do right now is run a couple of fresh scans against your controlled testbed (the test-site/ with 12 known findings) and check the metrics logged to data/hallucination-metrics.json. Your target benchmarks from repoinfo.md are: OWASP disagreement rate at or below 20%, confidence mismatch rate at or below 15%, trust score at or above 70, and fabricated CVE count remaining at 0. If those targets are being met, the refinement is working and you have strong empirical data for Chapter 4. If they are not, that is still valuable to write about as an honest evaluation of the approach.
 
-From what i invisin eg a moduler app with scripts that run, then pass over to AI to read, what is actually happening and where are the "scripts" stored and logic. In a way that i could explain any aspect of this project/folder and areas, quiz me etc
-
-what % is this project completed out of all the TODO/s and roughplan. Then compare what we found (with PDF report) with vunlist.md and what % of what we have is shown, and what we can do to reach that, as this will be our rubric. 

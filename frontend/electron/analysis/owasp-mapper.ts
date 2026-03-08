@@ -2,6 +2,7 @@
 
 import type { VulnerabilityResult } from '../scanner/types'
 import { OWASP_TOP_10, OWASPCategory, type OWASPMapping, type VulnerabilityWithMapping } from './owasp-types'
+import { FEATURE_TOGGLES } from './feature-toggles'
 
 /**
  * Keyword weight map — high-specificity terms score more than generic ones.
@@ -43,6 +44,15 @@ const DEFAULT_KEYWORD_WEIGHT = 3
  * Returns array of possible mappings sorted by confidence.
  */
 export function mapVulnerabilityToOWASP(vuln: VulnerabilityResult): OWASPMapping[] {
+  // Ablation: when OWASP mapping is disabled, return everything as A05
+  if (!FEATURE_TOGGLES.owaspMapping) {
+    return [{
+      category: OWASPCategory.A05_SECURITY_MISCONFIGURATION,
+      confidence: 'low',
+      reason: 'OWASP mapping disabled for ablation test'
+    }]
+  }
+
   const mappings: OWASPMapping[] = []
   
   // Combine all text fields for matching

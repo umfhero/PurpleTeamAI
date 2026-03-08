@@ -12,6 +12,13 @@ export interface NmapScanData {
   securityScore?: SecurityScore
   owaspCoverage?: OWASPCoverage
   owaspDistribution?: Record<OWASPCategory, number>
+  featureToggles?: {
+    owaspMapping: boolean
+    aiAnalysis: boolean
+    hallucinationGuard: boolean
+    contextualWeighting: boolean
+    deltaComparison: boolean
+  }
 }
 
 export interface PortResult {

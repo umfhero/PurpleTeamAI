@@ -73,15 +73,17 @@ Orchestrates Nmap and converts its output into usable data.
 
 Pure computation — no external calls. Categorises, scores, and compares scan results deterministically.
 
-| File                     | Role                                                                                                                                          |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `owasp-types.ts`         | Enum of 10 OWASP categories (A01–A10), each with name, description, keyword list, and CVE patterns                                            |
-| `owasp-mapper.ts`        | Maps each vulnerability to OWASP categories via keyword matching across title, description, CVE, service, and output fields                   |
-| `security-scorer.ts`     | Calculates 0-100 security score with grade, confidence level, breakdown, and recommendations                                                  |
-| `hallucination-guard.ts` | Cross-validates AI output against deterministic scan data; flags potential hallucinations                                                     |
-| `delta-types.ts`         | Type definitions for the delta comparison system: `ScanDelta`, `ScanDeltaChain`, `TargetGroup`, `OWASPDeltaEntry`, `VulnerabilityFingerprint` |
-| `delta-comparison.ts`    | Delta comparison engine — computes resolved/new/persisting vulns between sequential scans of the same target                                  |
-| `index.ts`               | Barrel export                                                                                                                                 |
+| File                       | Role                                                                                                                                          |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `owasp-types.ts`           | Enum of 10 OWASP categories (A01–A10), each with name, description, keyword list, and CVE patterns                                            |
+| `owasp-mapper.ts`          | Maps each vulnerability to OWASP categories via keyword matching across title, description, CVE, service, and output fields                   |
+| `security-scorer.ts`       | Calculates 0-100 security score with grade, confidence level, breakdown, and recommendations                                                  |
+| `hallucination-guard.ts`   | Cross-validates AI output against deterministic scan data; flags potential hallucinations                                                     |
+| `hallucination-metrics.ts` | Extracts, persists, and aggregates longitudinal hallucination metrics across scans                                                            |
+| `feature-toggles.ts`       | Runtime feature toggle configuration for ablation testing — controls which pipeline features are active                                       |
+| `delta-types.ts`           | Type definitions for the delta comparison system: `ScanDelta`, `ScanDeltaChain`, `TargetGroup`, `OWASPDeltaEntry`, `VulnerabilityFingerprint` |
+| `delta-comparison.ts`      | Delta comparison engine — computes resolved/new/persisting vulns between sequential scans of the same target                                  |
+| `index.ts`                 | Barrel export                                                                                                                                 |
 
 **OWASP Mapping features:**
 
@@ -94,11 +96,18 @@ Pure computation — no external calls. Categorises, scores, and compares scan r
 **Security Scoring features:**
 
 - **Weighted severity deductions** — critical: −20, high: −10, medium: −5, low: −2, info: −1
+- **Exploitability-aware contextual multipliers (Extension 4)** — when `contextualWeighting` toggle is ON, each vulnerability's base deduction is multiplied by port exposure × service exposure × auth weakness before summing. All multipliers are named constants, deterministic, and traceable
+- **Port exposure weighting** — vulns on high-exposure web ports (80, 443, 8080, 8443) get ×1.5; high-exposure service ports (21 FTP, 22 SSH, 23 Telnet, 25 SMTP, 3389 RDP) get ×1.3; all others ×1.0
+- **Service exposure amplification** — database services (mysql, postgres, mssql, oracle, mongodb, redis, memcached, elasticsearch) get ×1.5; remote-access services (ftp, telnet, vnc, rdp, smb) get ×1.3; others ×1.0
+- **Authentication weakness multiplier** — vulns matching auth-weakness patterns in title/description/output: default credentials/anonymous login/brute force etc. get ×1.8; basic auth/cleartext password etc. get ×1.4; no match ×1.0
+- **TLS absence penalty** — flat −8 deduction applied once if HTTP ports exist without any HTTPS equivalent detected
+- **Per-vulnerability transparency** — score result includes `vulnerabilityContextDetails` array showing each vuln's base deduction, adjusted deduction, and individual multiplier values
+- **Contextual weighting summary** — score result includes `contextualWeighting` object with `tlsPenaltyApplied`, `totalBaseDeductions`, `totalAdjustedDeductions`
 - **OWASP breadth penalty** — −5 per OWASP category found (wide attack surface = worse)
 - **Remediation bonus** — +10 if LLM analysis exists (indicates full pipeline completion)
 - **Separate confidence calculation** — high score with low confidence means "scanner couldn't find much", not "target is secure"
 - **Confidence logic** — no open ports = low; web services + zero vulns = low (scanner likely missed things); ≥5 vulns = high
-- **Contextual recommendations** — generated based on vuln counts, OWASP coverage width, and scan confidence
+- **Contextual recommendations** — generated based on vuln counts, OWASP coverage width, scan confidence, and TLS absence
 
 **Delta Comparison features:**
 
@@ -108,6 +117,20 @@ Pure computation — no external calls. Categorises, scores, and compares scan r
 - **OWASP coverage delta** — computes per-category change in vulnerability count across the OWASP Top 10 between the two scans. Negative values indicate remediation progress; positive values indicate regressions
 - **Delta chain computation** — `computeAllDeltas()` takes a list of scans for one target and produces a chain of pairwise comparisons (each consecutive pair), enabling lifecycle tracking across multiple assessment cycles
 - **Target grouping** — `groupScansByTarget()` aggregates all saved scans by target URL, sorted newest-first, with latest score/grade metadata for the sidebar
+
+**Feature Toggle System** (`feature-toggles.ts`):
+
+A runtime toggle system for ablation testing — allows disabling individual pipeline features to measure their contribution without re-scanning. Toggles are read from an exported object at runtime (not compiled-in constants), so they can be changed between runs without rebuilding.
+
+| Toggle                | Default | When disabled                                                                                                                            | Wired in                                                        |
+| --------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `owaspMapping`        | `true`  | Every vulnerability maps to A05 (Security Misconfiguration) with confidence `low` and reason "OWASP mapping disabled"                    | `owasp-mapper.ts` — early return in `mapVulnerabilityToOWASP()` |
+| `aiAnalysis`          | `true`  | Skips Gemini API call entirely, returns empty analysis, no hallucination guard runs, no +10 remediation bonus                            | `main.ts` — `llm:analyze-vulnerabilities` IPC handler           |
+| `hallucinationGuard`  | `true`  | Skips all validation, returns neutral report (trust score 100, zero flags), does not persist metrics                                     | `main.ts` — inside the LLM result handler block                 |
+| `contextualWeighting` | `true`  | Skips multiplier logic, uses flat base severity deductions only (original scoring). Score includes `contextualWeightingEnabled: boolean` | `security-scorer.ts` — `calculateSecurityScore()`               |
+| `deltaComparison`     | `true`  | No toggle wiring needed — delta only runs on-demand when user requests a comparison between two scans                                    | N/A                                                             |
+
+**Self-documenting scans:** Every scan JSON saved to `data/scans/` includes a `featureToggles` snapshot recording which toggles were active when that scan was processed. Added via `getToggleSnapshot()` in `nmap.ts` before Phase 1 save and merged-results save. The `NmapScanData` type in `scanner/types.ts` has an optional `featureToggles` field for this.
 
 ---
 
@@ -365,15 +388,15 @@ Every time the LLM analyses vulnerabilities, the hallucination guard logs struct
 
 **Metrics tracked per scan:**
 
-| Metric                              | What it measures                                                              | How it's calculated                                                                     |
-| ----------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `owaspDisagreementRate`             | How often AI's OWASP category differs from deterministic keyword matching     | disagreement count / total analyzed                                                     |
-| `owaspDisagreementCount`            | Vulnerabilities where AI category ≠ keyword-matched category                  | Count of cross-validation failures                                                      |
-| `fabricatedCVECount`                | CVE references in AI output not found in scan data                            | Count of invented CVE strings                                                           |
-| `confidenceMismatchRate`            | How often AI-to-keyword confidence gap exceeds 0.5                            | mismatch count / total analyzed                                                         |
-| `trustScore`                        | Overall reliability rating (0-100)                                            | `100 - (fabricatedCVEs × 50) - (owaspDisagreements × 5) - (confidenceMismatches × 3)` |
-| `totalAnalysed`                     | Vulnerabilities processed in this scan                                        | Count of LLM analyses returned                                                          |
-| `lowRisk`, `mediumRisk`, `highRisk` | Vulnerability counts by hallucination risk level                              | Severity of detected hallucination flags                                                |
+| Metric                              | What it measures                                                          | How it's calculated                                                                   |
+| ----------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `owaspDisagreementRate`             | How often AI's OWASP category differs from deterministic keyword matching | disagreement count / total analyzed                                                   |
+| `owaspDisagreementCount`            | Vulnerabilities where AI category ≠ keyword-matched category              | Count of cross-validation failures                                                    |
+| `fabricatedCVECount`                | CVE references in AI output not found in scan data                        | Count of invented CVE strings                                                         |
+| `confidenceMismatchRate`            | How often AI-to-keyword confidence gap exceeds 0.5                        | mismatch count / total analyzed                                                       |
+| `trustScore`                        | Overall reliability rating (0-100)                                        | `100 - (fabricatedCVEs × 50) - (owaspDisagreements × 5) - (confidenceMismatches × 3)` |
+| `totalAnalysed`                     | Vulnerabilities processed in this scan                                    | Count of LLM analyses returned                                                        |
+| `lowRisk`, `mediumRisk`, `highRisk` | Vulnerability counts by hallucination risk level                          | Severity of detected hallucination flags                                              |
 
 **Technical implementation:**
 
@@ -398,19 +421,23 @@ Trust scores were consistently low (0–65) not because the AI was unreliable, b
 **What was implemented:**
 
 **Strategy 1 — Smarter OWASP validators** (`owasp-types.ts`, `owasp-mapper.ts`):
+
 - Expanded keyword vocabulary across 6 OWASP categories (A01, A02, A03, A05, A06, A07) — added CSRF, HSTS, clickjacking, cookie flags, CORS, named TLS attacks (POODLE, BEAST, Heartbleed), template injection, RCE, log4shell, MFA/2FA terms, and ~60 more keywords
 - Replaced simple count-based confidence (`3+ hits = high`) with weighted keyword scoring — specific terms like `sql injection` score 10, generic terms like `ssl` score 2, thresholds: total weight ≥ 10 = high, ≥ 5 = medium
 - Added 6 context-aware regex rules: missing HTTP headers → A05, CSRF → A01, information disclosure → A01, cookie security → A05, outdated software → A06
 
 **Strategy 2 — AI prompt alignment** (`gemini.ts`):
+
 - Added explicit OWASP categorisation rules to the Gemini `buildPrompt()` function, mapping vulnerability types to specific OWASP categories (e.g., "CSRF, information disclosure → A01", "missing HTTP headers, cookie flags → A05")
 - Standardises AI labelling to match deterministic validators without compromising analysis quality
 
 **Strategy 3 — Scaled confidence comparison** (`hallucination-guard.ts`):
+
 - Replaced binary mismatch check with proportional comparison: keyword confidence maps to numeric values (high = 0.9, medium = 0.6, low = 0.3)
 - Only flags when the gap exceeds 0.5 (e.g., AI says 0.9 but keywords say 0.3), eliminating false positives where AI is rightfully confident
 
 **Strategy 4 — Weighted trust score formula** (`hallucination-guard.ts`):
+
 - Replaced flat `100 - (highRisk × 25) - (mediumRisk × 10)` with check-type-weighted scoring:
   - Fabricated CVEs: −50 pts each (genuinely dangerous — hardcoded data is wrong)
   - OWASP disagreements: −5 pts each (subjective labelling difference)
@@ -423,13 +450,25 @@ Trust scores were consistently low (0–65) not because the AI was unreliable, b
 - Trust score ≥ 70 on repeat scans of the same target
 - Fabricated CVE count remains at 0 (this check was never weakened)
 
-### 4. Exploitability-Aware Risk Weighting
+### 4. Exploitability-Aware Risk Weighting — ✅ IMPLEMENTED
 
-The security scoring engine will incorporate contextual exploitability factors:
+The security scoring engine applies contextual exploitability multipliers to each vulnerability's base severity deduction before summing, reflecting real-world risk based on deployment context rather than just raw severity.
 
-- Public-facing port exposure weighting
-- Database/service exposure amplification
-- TLS absence penalty
-- Authentication weakness multipliers
+**Implementation:** `frontend/electron/analysis/security-scorer.ts`
 
-All adjustments will remain deterministic and transparent, strengthening prioritisation realism without introducing probabilistic instability.
+**Four contextual multipliers (stack multiplicatively per vulnerability):**
+
+| Multiplier       | What it measures                    | Constants                                                                                                                                                       | Applied to                          |
+| ---------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Port exposure    | Risk from commonly targeted ports   | Web ports (80, 443, 8080, 8443) → ×1.5; Service ports (21, 22, 23, 25, 3389) → ×1.3; Others → ×1.0                                                              | `vuln.port`                         |
+| Service exposure | Risk from database/admin services   | DB services (mysql, postgres, mssql, oracle, mongodb, redis, memcached, elasticsearch) → ×1.5; Remote access (ftp, telnet, vnc, rdp, smb) → ×1.3; Others → ×1.0 | `vuln.service`                      |
+| Auth weakness    | Risk from authentication flaws      | Default creds/anon login/brute force/login bypass → ×1.8; Basic auth/cleartext password → ×1.4; Others → ×1.0                                                   | `vuln.title + description + output` |
+| TLS absence      | Systemic unencrypted transport risk | Flat −8 penalty, applied once if HTTP ports exist without HTTPS                                                                                                 | `scanData.ports`                    |
+
+**Formula per vulnerability:** `adjustedDeduction = baseDeduction × portMultiplier × serviceMultiplier × authMultiplier`
+
+**Controlled by feature toggle:** `FEATURE_TOGGLES.contextualWeighting` — when OFF, all multipliers are bypassed and flat base deductions are used (original behaviour). The `contextualWeightingEnabled` boolean in the score result records which mode produced the score.
+
+**UI:** `SecurityScoreCard.tsx` displays a contextual weighting subsection showing base vs adjusted deduction totals and TLS penalty status when weighting is active.
+
+**Types added:** `ContextualFactors`, `ContextualWeightingSummary`, `VulnerabilityContextualDetail` — exported from `security-scorer.ts` and mirrored in `src/types/electron.d.ts`.

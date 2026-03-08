@@ -5,6 +5,7 @@ import { parseNmapXml } from './parser'
 import type { NmapScanData, PortResult, VulnerabilityResult } from './types'
 import { calculateSecurityScore } from '../analysis/security-scorer'
 import { getOWASPCoverage, getOWASPDistribution } from '../analysis/owasp-mapper'
+import { getToggleSnapshot } from '../analysis/feature-toggles'
 
 // Directory for storing scan results
 const SCANS_DIR = path.join(process.cwd(), 'data', 'scans')
@@ -331,6 +332,7 @@ export async function runNmapScan(
 
   // Save Phase 1 JSON
   const jsonFile = phase1File.replace('.xml', '.json')
+  phase1.data.featureToggles = getToggleSnapshot()
   await fs.writeFile(jsonFile, JSON.stringify(phase1.data, null, 2))
 
   if (scanAborted) {
@@ -387,6 +389,7 @@ export async function runNmapScan(
   merged.securityScore = calculateSecurityScore(merged, !!merged.llmAnalysis)
   merged.owaspCoverage = getOWASPCoverage(merged.vulnerabilities)
   merged.owaspDistribution = getOWASPDistribution(merged.vulnerabilities)
+  merged.featureToggles = getToggleSnapshot()
 
   onProgress?.(`\n✓ Full scan complete: ${merged.ports.length} ports, ${merged.vulnerabilities.length} vulns [${merged.securityScore.grade}]\n`)
   onProgress?.(`\n✓ All phases complete!\n`)

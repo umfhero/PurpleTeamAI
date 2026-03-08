@@ -1,7 +1,68 @@
 // Security Score Calculator - calculates 0-100 security score based on vulnerabilities
 
-import type { NmapScanData } from '../scanner/types'
+import type { NmapScanData, VulnerabilityResult } from '../scanner/types'
 import { getOWASPCoverage } from './owasp-mapper'
+import { FEATURE_TOGGLES } from './feature-toggles'
+
+// ============================================
+// Contextual Multiplier Constants (Extension 4)
+// ============================================
+
+/** Port exposure multipliers — commonly targeted ports carry more real-world risk */
+const PORT_EXPOSURE: Record<string, number> = {
+  // High-exposure web ports
+  '80': 1.5, '443': 1.5, '8080': 1.5, '8443': 1.5,
+  // High-exposure service ports
+  '21': 1.3,   // FTP
+  '22': 1.3,   // SSH
+  '23': 1.3,   // Telnet
+  '25': 1.3,   // SMTP
+  '3389': 1.3, // RDP
+}
+const PORT_EXPOSURE_DEFAULT = 1.0
+
+/** Service exposure multipliers — database/admin services grant direct data access */
+const SERVICE_EXPOSURE_HIGH = 1.5
+const SERVICE_EXPOSURE_MEDIUM = 1.3
+const SERVICE_EXPOSURE_DEFAULT = 1.0
+
+const SERVICE_PATTERNS_HIGH = /\b(mysql|postgres|mssql|oracle|mongodb|redis|memcached|elasticsearch)\b/i
+const SERVICE_PATTERNS_MEDIUM = /\b(ftp|telnet|vnc|rdp|smb)\b/i
+
+/** Authentication weakness multipliers */
+const AUTH_WEAKNESS_HIGH = 1.8
+const AUTH_WEAKNESS_MEDIUM = 1.4
+const AUTH_WEAKNESS_DEFAULT = 1.0
+
+const AUTH_PATTERNS_HIGH = /default.?cred|default.?password|anonymous.?login|no.?auth|weak.?password|brute.?force|login.?bypass/i
+const AUTH_PATTERNS_MEDIUM = /basic.?auth|cleartext.?password|plain.?text.?auth|unencrypted.?login/i
+
+/** TLS absence penalty — flat deduction when HTTP exists without HTTPS */
+const TLS_ABSENCE_PENALTY = 8
+
+// ============================================
+// Types
+// ============================================
+
+export interface ContextualFactors {
+  portExposure: number
+  serviceExposure: number
+  authWeakness: number
+  combined: number
+}
+
+export interface ContextualWeightingSummary {
+  tlsPenaltyApplied: boolean
+  totalBaseDeductions: number
+  totalAdjustedDeductions: number
+}
+
+export interface VulnerabilityContextualDetail {
+  vulnerabilityId: string
+  baseDeduction: number
+  adjustedDeduction: number
+  contextualFactors: ContextualFactors
+}
 
 export interface SecurityScore {
   overall: number // 0-100
@@ -13,6 +74,9 @@ export interface SecurityScore {
     owaspCoverage: number // Penalty for wide OWASP coverage (more categories = worse)
     remediationPotential: number // Bonus for having actionable fixes
   }
+  contextualWeightingEnabled: boolean
+  contextualWeighting?: ContextualWeightingSummary
+  vulnerabilityContextDetails?: VulnerabilityContextualDetail[]
   details: {
     totalVulnerabilities: number
     critical: number
@@ -24,18 +88,74 @@ export interface SecurityScore {
   recommendations: string[]
 }
 
+// ============================================
+// Multiplier Helpers (Extension 4)
+// ============================================
+
+/** Returns the port exposure multiplier for a vulnerability */
+function getPortMultiplier(vuln: VulnerabilityResult): number {
+  if (vuln.port == null) return PORT_EXPOSURE_DEFAULT
+  return PORT_EXPOSURE[String(vuln.port)] ?? PORT_EXPOSURE_DEFAULT
+}
+
+/** Returns the service exposure multiplier for a vulnerability */
+function getServiceMultiplier(vuln: VulnerabilityResult): number {
+  const service = vuln.service || ''
+  if (SERVICE_PATTERNS_HIGH.test(service)) return SERVICE_EXPOSURE_HIGH
+  if (SERVICE_PATTERNS_MEDIUM.test(service)) return SERVICE_EXPOSURE_MEDIUM
+  return SERVICE_EXPOSURE_DEFAULT
+}
+
+/** Returns the authentication weakness multiplier for a vulnerability */
+function getAuthMultiplier(vuln: VulnerabilityResult): number {
+  const searchText = [vuln.title, vuln.description, vuln.output || ''].join(' ')
+  if (AUTH_PATTERNS_HIGH.test(searchText)) return AUTH_WEAKNESS_HIGH
+  if (AUTH_PATTERNS_MEDIUM.test(searchText)) return AUTH_WEAKNESS_MEDIUM
+  return AUTH_WEAKNESS_DEFAULT
+}
+
+/** Returns the base severity deduction for a vulnerability */
+function getBaseDeduction(severity: VulnerabilityResult['severity']): number {
+  switch (severity) {
+    case 'critical': return 20
+    case 'high': return 10
+    case 'medium': return 5
+    case 'low': return 2
+    case 'info': return 1
+  }
+}
+
+/** Checks whether TLS absence penalty should apply */
+function shouldApplyTLSPenalty(scanData: NmapScanData): boolean {
+  const openPorts = scanData.ports.filter(p => p.state === 'open')
+  const hasHTTP = openPorts.some(p =>
+    (p.service && /^http$/i.test(p.service)) ||
+    [80, 8080].includes(p.port)
+  )
+  if (!hasHTTP) return false
+
+  const hasHTTPS = openPorts.some(p =>
+    (p.service && /https|ssl\/http/i.test(p.service)) ||
+    p.port === 443
+  )
+  return !hasHTTPS
+}
+
+// ============================================
+// Main Scorer
+// ============================================
+
 /**
  * Calculates security score using weighted vulnerability severity and OWASP coverage.
  * 
  * Algorithm:
  * - Start at 100 points
- * - Critical vulns: -20 each
- * - High vulns: -10 each
- * - Medium vulns: -5 each
- * - Low vulns: -2 each
- * - Info vulns: -1 each
- * - OWASP coverage penalty: -5 per category found (wide attack surface = worse)
- * - Remediation bonus: up to +10 if all vulns have LLM analysis (indicates fixability)
+ * - Per-vulnerability deductions: critical −20, high −10, medium −5, low −2, info −1
+ * - When contextualWeighting is ON (Extension 4), each deduction is multiplied by
+ *   portExposure × serviceExposure × authWeakness before summing.
+ * - TLS absence penalty: −8 if HTTP present without HTTPS (applied once)
+ * - OWASP coverage penalty: −5 per category found (wide attack surface = worse)
+ * - Remediation bonus: +10 if LLM analysis exists (indicates fixability)
  * - Floor at 0, ceiling at 100
  * 
  * Confidence is calculated separately based on scan coverage — a high score
@@ -43,9 +163,10 @@ export interface SecurityScore {
  */
 export function calculateSecurityScore(
   scanData: NmapScanData,
-  hasLLMAnalysis: boolean = false
+  hasLLMAnalysis: boolean
 ): SecurityScore {
   const vulns = scanData.vulnerabilities
+  const useWeighting = FEATURE_TOGGLES.contextualWeighting
 
   // Count vulnerabilities by severity
   const counts = {
@@ -56,13 +177,44 @@ export function calculateSecurityScore(
     info: vulns.filter(v => v.severity === 'info').length
   }
 
-  // Calculate severity impact (points lost)
-  const severityImpact = 
-    (counts.critical * 20) +
-    (counts.high * 10) +
-    (counts.medium * 5) +
-    (counts.low * 2) +
-    (counts.info * 1)
+  // Calculate per-vulnerability deductions with optional contextual multipliers
+  let totalBaseDeductions = 0
+  let totalAdjustedDeductions = 0
+  const vulnContextDetails: VulnerabilityContextualDetail[] = []
+
+  for (const vuln of vulns) {
+    const base = getBaseDeduction(vuln.severity)
+    totalBaseDeductions += base
+
+    if (useWeighting) {
+      const portMul = getPortMultiplier(vuln)
+      const serviceMul = getServiceMultiplier(vuln)
+      const authMul = getAuthMultiplier(vuln)
+      const combined = portMul * serviceMul * authMul
+      const adjusted = base * combined
+      totalAdjustedDeductions += adjusted
+
+      vulnContextDetails.push({
+        vulnerabilityId: vuln.id,
+        baseDeduction: base,
+        adjustedDeduction: Math.round(adjusted * 100) / 100,
+        contextualFactors: {
+          portExposure: portMul,
+          serviceExposure: serviceMul,
+          authWeakness: authMul,
+          combined: Math.round(combined * 100) / 100,
+        },
+      })
+    } else {
+      totalAdjustedDeductions += base
+    }
+  }
+
+  // TLS absence penalty (Extension 4) — only when weighting is active
+  const tlsPenaltyApplied = useWeighting && shouldApplyTLSPenalty(scanData)
+  if (tlsPenaltyApplied) {
+    totalAdjustedDeductions += TLS_ABSENCE_PENALTY
+  }
 
   // Calculate OWASP coverage penalty
   const owaspCoverage = getOWASPCoverage(vulns)
@@ -74,10 +226,10 @@ export function calculateSecurityScore(
     remediationBonus = 10 // Full bonus if LLM analysis available
   }
 
-  // Calculate final score
+  // Calculate final score using adjusted deductions
   const baseScore = 100
-  const finalScore = Math.max(0, Math.min(100, 
-    baseScore - severityImpact - owaspPenalty + remediationBonus
+  const finalScore = Math.max(0, Math.min(100,
+    baseScore - totalAdjustedDeductions - owaspPenalty + remediationBonus
   ))
 
   // Determine letter grade
@@ -94,11 +246,11 @@ export function calculateSecurityScore(
 
   // Generate recommendations
   const recommendations: string[] = []
-  
+
   if (counts.critical > 0) {
     recommendations.push(`Address ${counts.critical} critical vulnerabilit${counts.critical === 1 ? 'y' : 'ies'} immediately`)
   }
-  
+
   if (counts.high > 0) {
     recommendations.push(`Fix ${counts.high} high-severity issue${counts.high === 1 ? '' : 's'} as priority`)
   }
@@ -125,13 +277,18 @@ export function calculateSecurityScore(
     recommendations.push('Strong security posture detected — address remaining issues to reach A+')
   }
 
-  return {
+  if (tlsPenaltyApplied) {
+    recommendations.push('No HTTPS detected — enable TLS to protect data in transit')
+  }
+
+  const result: SecurityScore = {
     overall: Math.round(finalScore),
     grade,
     confidence,
     confidenceReason,
+    contextualWeightingEnabled: useWeighting,
     breakdown: {
-      severityImpact: -severityImpact,
+      severityImpact: -Math.round(totalAdjustedDeductions),
       owaspCoverage: -owaspPenalty,
       remediationPotential: remediationBonus
     },
@@ -141,6 +298,17 @@ export function calculateSecurityScore(
     },
     recommendations
   }
+
+  if (useWeighting) {
+    result.contextualWeighting = {
+      tlsPenaltyApplied,
+      totalBaseDeductions: Math.round(totalBaseDeductions),
+      totalAdjustedDeductions: Math.round(totalAdjustedDeductions * 100) / 100,
+    }
+    result.vulnerabilityContextDetails = vulnContextDetails
+  }
+
+  return result
 }
 
 /**
