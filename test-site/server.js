@@ -16,21 +16,65 @@
  */
 
 const express = require('express');
+const https = require('https');
 const cookieParser = require('cookie-parser');
 const serveIndex = require('serve-index');
+const selfsigned = require('selfsigned');
 const path = require('path');
 
 const app = express();
 const PORT = 8080;
+const HTTPS_PORT = 443;
+
+// Generate a local self-signed cert so HTTPS is available for scanner validation.
+const certAttrs = [{ name: 'commonName', value: 'localhost' }];
+const certOptions = {
+  days: 365,
+  keySize: 2048,
+  algorithm: 'sha256',
+  extensions: [
+    {
+      name: 'subjectAltName',
+      altNames: [
+        { type: 2, value: 'localhost' },
+        { type: 7, ip: '127.0.0.1' }
+      ]
+    }
+  ]
+};
+const pems = selfsigned.generate(certAttrs, certOptions);
 
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
-// ── Intentionally NO security headers ──────────────────────────────
-// No X-Frame-Options        → Clickjacking
-// No Content-Security-Policy → XSS / data injection
-// No X-Content-Type-Options  → MIME sniffing
-// No Strict-Transport-Security → No HSTS
+// FIX 2: Add core security headers that scanner checks via http-headers script.
+app.use((req, res, next) => {
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Content-Security-Policy', "default-src 'self'");
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
+
+// FIX 3: Mitigate byterange DoS checks by denying multi/partial range requests.
+// This removes the attack primitive used by CVE-2011-3192 style probes.
+app.use((req, res, next) => {
+  res.setHeader('Accept-Ranges', 'none');
+  if (req.headers.range) {
+    return res.status(416).send('Range requests are not supported');
+  }
+  return next();
+});
+
+// FIX 1: Redirect HTTP to HTTPS to remove cleartext transport.
+app.use((req, res, next) => {
+  if (!req.secure && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(`https://localhost${req.originalUrl}`);
+  }
+  return next();
+});
+
+// ── Security headers fixed for positive scan delta ─────────────────
 
 // ── FIX 1: Secure session cookie (HttpOnly + SameSite) ─────────────
 app.use((req, res, next) => {
@@ -122,17 +166,18 @@ app.get('/redirect', (req, res) => {
   res.redirect(url);
 });
 
-// ── Start server (HTTP only — no HTTPS) ───────────────────────────
+// ── Start server (HTTP + HTTPS for transport security) ───────────
 app.listen(PORT, () => {
   console.log('');
   console.log('╔══════════════════════════════════════════════════╗');
   console.log('║  ⚠  VULNERABLE TEST SERVER — DO NOT USE IN PROD ║');
   console.log('╠══════════════════════════════════════════════════╣');
-  console.log(`║  Running on http://localhost:${PORT}              ║`);
+  console.log(`║  Running on http://localhost:${PORT} (redirects)  ║`);
+  console.log(`║  Running on https://localhost:${HTTPS_PORT}         ║`);
   console.log('║                                                  ║');
   console.log('║  Vulnerabilities:                                ║');
-  console.log('║   • Missing security headers (XFO, CSP, XCTO)   ║');
-  console.log('║   • No HTTPS                                    ║');
+  console.log('║   • (FIXED) Security headers now set             ║');
+  console.log('║   • (FIXED) HTTPS is now enabled                 ║');
   console.log('║   • CSRF on all forms                            ║');
   console.log('║   • Reflected XSS on /search?q=                  ║');
   console.log('║   • Insecure cookies                             ║');
@@ -142,4 +187,8 @@ app.listen(PORT, () => {
   console.log('║   • Dangerous HTTP methods (PUT, DELETE)         ║');
   console.log('╚══════════════════════════════════════════════════╝');
   console.log('');
+});
+
+https.createServer({ key: pems.private, cert: pems.cert }, app).listen(HTTPS_PORT, () => {
+  console.log(`HTTPS endpoint active on https://localhost:${HTTPS_PORT}`);
 });
