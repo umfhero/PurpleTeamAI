@@ -83,12 +83,12 @@ Run these in order. Each test group builds on the previous one.
 
 These establish your "before Extension 4" baselines. Run these BEFORE implementing Extension 4.
 
-| Test ID | Target | Feature State | What to Save |
-|---------|--------|--------------|--------------|
-| B1 | localhost (testbed, all 12 vulns active) | All ON, Ext 4 OFF | Scan JSON, score, OWASP map, hallucination metrics, screenshot of dashboard |
-| B2 | localhost (testbed, all 12 vulns active) | All ON, Ext 4 OFF | Second scan of same state — confirms result consistency |
-| B3 | testphp.vulnweb.com | All ON, Ext 4 OFF | Scan JSON, score, OWASP map, hallucination metrics |
-| B4 | testphp.vulnweb.com | All ON, Ext 4 OFF | Second scan — confirms consistency on external target |
+| Test ID | Target                                   | Feature State     | What to Save                                                                |
+| ------- | ---------------------------------------- | ----------------- | --------------------------------------------------------------------------- |
+| B1      | localhost (testbed, all 12 vulns active) | All ON, Ext 4 OFF | Scan JSON, score, OWASP map, hallucination metrics, screenshot of dashboard |
+| B2      | localhost (testbed, all 12 vulns active) | All ON, Ext 4 OFF | Second scan of same state — confirms result consistency                     |
+| B3      | testphp.vulnweb.com                      | All ON, Ext 4 OFF | Scan JSON, score, OWASP map, hallucination metrics                          |
+| B4      | testphp.vulnweb.com                      | All ON, Ext 4 OFF | Second scan — confirms consistency on external target                       |
 
 **What to record from B1–B4:**
 
@@ -107,10 +107,10 @@ These establish your "before Extension 4" baselines. Run these BEFORE implementi
 
 Implement Extension 4 (contextual weighting), then re-scan.
 
-| Test ID | Target | Feature State | What to Save |
-|---------|--------|--------------|--------------|
-| E1 | localhost (testbed, all 12 vulns active) | All ON, Ext 4 ON | Scan JSON, score, contextualWeighting breakdown |
-| E2 | testphp.vulnweb.com | All ON, Ext 4 ON | Scan JSON, score, contextualWeighting breakdown |
+| Test ID | Target                                   | Feature State    | What to Save                                    |
+| ------- | ---------------------------------------- | ---------------- | ----------------------------------------------- |
+| E1      | localhost (testbed, all 12 vulns active) | All ON, Ext 4 ON | Scan JSON, score, contextualWeighting breakdown |
+| E2      | testphp.vulnweb.com                      | All ON, Ext 4 ON | Scan JSON, score, contextualWeighting breakdown |
 
 **What to record from E1–E2:**
 
@@ -123,11 +123,11 @@ Implement Extension 4 (contextual weighting), then re-scan.
 
 **Key comparison for Chapter 4:**
 
-| Metric | B1 (Flat) | E1 (Weighted) | Delta |
-|--------|-----------|---------------|-------|
-| Score | ? | ? | ? |
-| Highest single deduction | ? | ? | ? |
-| TLS penalty applied | N/A | ?  | — |
+| Metric                   | B1 (Flat) | E1 (Weighted) | Delta |
+| ------------------------ | --------- | ------------- | ----- |
+| Score                    | ?         | ?             | ?     |
+| Highest single deduction | ?         | ?             | ?     |
+| TLS penalty applied      | N/A       | ?             | —     |
 
 ---
 
@@ -137,11 +137,12 @@ These use the feature toggle system. You do NOT need to re-scan — you reproces
 
 #### Test 3A: No OWASP Mapping (Classification Contribution)
 
-| Test ID | Toggle Changed | Expected Effect |
-|---------|---------------|-----------------|
-| A1 | `owaspMapping: false` (all others ON) | Every vuln falls to A05. OWASP breadth penalty drops to −5 (one category). Score increases because breadth penalty shrinks. Hallucination guard disagreement rate may spike (AI still classifies properly but keyword matcher says A05 for everything). |
+| Test ID | Toggle Changed                        | Expected Effect                                                                                                                                                                                                                                         |
+| ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1      | `owaspMapping: false` (all others ON) | Every vuln falls to A05. OWASP breadth penalty drops to −5 (one category). Score increases because breadth penalty shrinks. Hallucination guard disagreement rate may spike (AI still classifies properly but keyword matcher says A05 for everything). |
 
 **What to record:**
+
 - Score with vs without OWASP mapping (E1 vs A1)
 - OWASP category distribution: E1 shows spread across categories, A1 shows everything in A05
 - Hallucination guard trust score change (demonstrates that the cross-validation layer detects when classification is degraded)
@@ -150,11 +151,12 @@ These use the feature toggle system. You do NOT need to re-scan — you reproces
 
 #### Test 3B: No AI Analysis (LLM Enrichment Contribution)
 
-| Test ID | Toggle Changed | Expected Effect |
-|---------|---------------|-----------------|
-| A2 | `aiAnalysis: false` (all others ON) | No plain-English summaries, no AI-generated remediation steps, no remediation bonus (+10 lost). Score drops by 10. Reports contain raw scan data only — no actionable guidance. |
+| Test ID | Toggle Changed                      | Expected Effect                                                                                                                                                                 |
+| ------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A2      | `aiAnalysis: false` (all others ON) | No plain-English summaries, no AI-generated remediation steps, no remediation bonus (+10 lost). Score drops by 10. Reports contain raw scan data only — no actionable guidance. |
 
 **What to record:**
+
 - Score with vs without AI (E1 vs A2) — expect exactly −10 from lost remediation bonus
 - Qualitative comparison: pick 3 example vulnerabilities and show the report output with AI (rich explanation + 3 remediation steps) vs without (raw Nmap output only)
 - Hallucination metrics file: no new entry appended (guard was skipped)
@@ -163,11 +165,12 @@ These use the feature toggle system. You do NOT need to re-scan — you reproces
 
 #### Test 3C: No Hallucination Guard (Validation Contribution)
 
-| Test ID | Toggle Changed | Expected Effect |
-|---------|---------------|-----------------|
-| A3 | `hallucinationGuard: false` (all others ON) | AI analysis runs but output is not validated. Trust score is hardcoded to 100. No per-vulnerability risk flags. Any fabricated CVEs or OWASP disagreements go undetected. |
+| Test ID | Toggle Changed                              | Expected Effect                                                                                                                                                           |
+| ------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A3      | `hallucinationGuard: false` (all others ON) | AI analysis runs but output is not validated. Trust score is hardcoded to 100. No per-vulnerability risk flags. Any fabricated CVEs or OWASP disagreements go undetected. |
 
 **What to record:**
+
 - Trust score: A3 always reports 100 (meaningless). E1 reports the real validated score.
 - Count of hallucination flags that E1 caught but A3 would have missed
 - If any fabricated CVEs existed in E1, highlight that A3 would have passed them through unchallenged
@@ -176,11 +179,12 @@ These use the feature toggle system. You do NOT need to re-scan — you reproces
 
 #### Test 3D: No Contextual Weighting (Extension 4 Contribution)
 
-| Test ID | Toggle Changed | Expected Effect |
-|---------|---------------|-----------------|
-| A4 | `contextualWeighting: false` (all others ON) | Flat severity deductions only. All vulns treated equally regardless of port, service, or auth context. Score rises because multipliers are removed. |
+| Test ID | Toggle Changed                               | Expected Effect                                                                                                                                     |
+| ------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A4      | `contextualWeighting: false` (all others ON) | Flat severity deductions only. All vulns treated equally regardless of port, service, or auth context. Score rises because multipliers are removed. |
 
 **What to record:**
+
 - This is effectively the B1 vs E1 comparison again, but now captured within the toggle framework so the `featureToggles` snapshot in the JSON proves the conditions
 
 **Chapter 4 argument**: Static severity-only scoring fails to reflect real-world exploitability. A medium-severity vulnerability on an exposed database port is operationally more dangerous than the same severity on an obscure internal service.
@@ -191,14 +195,15 @@ These use the feature toggle system. You do NOT need to re-scan — you reproces
 
 This demonstrates the purple team lifecycle loop. Uses localhost testbed only.
 
-| Test ID | Step | What to Do |
-|---------|------|-----------|
-| L1 | Initial scan | Scan localhost with all 12 vulns active, all features ON (including Ext 4). Save JSON. |
-| L2 | Remediate | Fix 4–6 of the 12 known vulnerabilities in `test-site/`. Document exactly which ones you fixed and how. |
-| L3 | Re-scan | Scan localhost again. Save JSON. |
-| L4 | Delta report | Generate delta comparison report (L1 → L3). Export the PDF. |
+| Test ID | Step         | What to Do                                                                                              |
+| ------- | ------------ | ------------------------------------------------------------------------------------------------------- |
+| L1      | Initial scan | Scan localhost with all 12 vulns active, all features ON (including Ext 4). Save JSON.                  |
+| L2      | Remediate    | Fix 4–6 of the 12 known vulnerabilities in `test-site/`. Document exactly which ones you fixed and how. |
+| L3      | Re-scan      | Scan localhost again. Save JSON.                                                                        |
+| L4      | Delta report | Generate delta comparison report (L1 → L3). Export the PDF.                                             |
 
 **What to record:**
+
 - L1 score vs L3 score (score should improve)
 - Resolved vulnerability count (should match the ones you fixed)
 - Persisting vulnerability count (should match the ones you left)
@@ -214,14 +219,15 @@ This demonstrates the purple team lifecycle loop. Uses localhost testbed only.
 
 Run 3–5 scans across different targets with all features ON (including Ext 4). The hallucination metrics file accumulates longitudinal data.
 
-| Test ID | Target | Purpose |
-|---------|--------|---------|
-| H1 | localhost | Accumulate metrics entry |
-| H2 | testphp.vulnweb.com | Accumulate metrics entry |
-| H3 | demo.testfire.net | Accumulate metrics entry (new target, tests generalisation) |
-| H4 | localhost (post-remediation from L3) | Accumulate metrics entry |
+| Test ID | Target                               | Purpose                                                     |
+| ------- | ------------------------------------ | ----------------------------------------------------------- |
+| H1      | localhost                            | Accumulate metrics entry                                    |
+| H2      | testphp.vulnweb.com                  | Accumulate metrics entry                                    |
+| H3      | Mutillidae                           | Accumulate metrics entry (new target, tests generalisation) |
+| H4      | localhost (post-remediation from L3) | Accumulate metrics entry                                    |
 
 **What to record from `data/hallucination-metrics.json`:**
+
 - Trust score per scan (target: ≥70)
 - OWASP disagreement rate per scan (target: ≤20%)
 - Confidence mismatch rate per scan (target: ≤15%)
@@ -238,62 +244,62 @@ Copy these tables into a spreadsheet or document and fill them in as you run eac
 
 ### Table 1: Scan Result Summary
 
-| Test ID | Date | Target | Score | Grade | Vulns (C/H/M/L/I) | OWASP Cats Hit | Confidence | Trust Score | Ext 4 Active | Feature Toggles |
-|---------|------|--------|-------|-------|-------------------|----------------|------------|-------------|-------------|-----------------|
-| B1 | | localhost | | | | | | | No | all on |
-| B2 | | localhost | | | | | | | No | all on |
-| B3 | | vulnweb | | | | | | | No | all on |
-| B4 | | vulnweb | | | | | | | No | all on |
-| E1 | | localhost | | | | | | | Yes | all on |
-| E2 | | vulnweb | | | | | | | Yes | all on |
-| A1 | | localhost | | | | | | | Yes | owasp OFF |
-| A2 | | localhost | | | | | | | Yes | ai OFF |
-| A3 | | localhost | | | | | | | Yes | guard OFF |
-| A4 | | localhost | | | | | | | No | weighting OFF |
+| Test ID | Date | Target    | Score | Grade | Vulns (C/H/M/L/I) | OWASP Cats Hit | Confidence | Trust Score | Ext 4 Active | Feature Toggles |
+| ------- | ---- | --------- | ----- | ----- | ----------------- | -------------- | ---------- | ----------- | ------------ | --------------- |
+| B1      |      | localhost |       |       |                   |                |            |             | No           | all on          |
+| B2      |      | localhost |       |       |                   |                |            |             | No           | all on          |
+| B3      |      | vulnweb   |       |       |                   |                |            |             | No           | all on          |
+| B4      |      | vulnweb   |       |       |                   |                |            |             | No           | all on          |
+| E1      |      | localhost |       |       |                   |                |            |             | Yes          | all on          |
+| E2      |      | vulnweb   |       |       |                   |                |            |             | Yes          | all on          |
+| A1      |      | localhost |       |       |                   |                |            |             | Yes          | owasp OFF       |
+| A2      |      | localhost |       |       |                   |                |            |             | Yes          | ai OFF          |
+| A3      |      | localhost |       |       |                   |                |            |             | Yes          | guard OFF       |
+| A4      |      | localhost |       |       |                   |                |            |             | No           | weighting OFF   |
 
 ### Table 2: Contextual Weighting Impact (Extension 4)
 
 | Test ID | Base Deductions Total | Adjusted Deductions Total | Difference | TLS Penalty | Highest Multiplied Vuln (name + combined multiplier) |
-|---------|----------------------|--------------------------|------------|-------------|------------------------------------------------------|
-| E1 | | | | | |
-| E2 | | | | | |
+| ------- | --------------------- | ------------------------- | ---------- | ----------- | ---------------------------------------------------- |
+| E1      |                       |                           |            |             |                                                      |
+| E2      |                       |                           |            |             |                                                      |
 
 ### Table 3: Ablation Score Comparison
 
-| Feature Disabled | Score With | Score Without | Delta | Key Observation |
-|-----------------|-----------|--------------|-------|-----------------|
-| OWASP Mapping | E1: ? | A1: ? | ? | |
-| AI Analysis | E1: ? | A2: ? | ? | |
-| Hallucination Guard | E1: ? | A3: ? | ? | |
-| Contextual Weighting | E1: ? | A4: ? | ? | |
+| Feature Disabled     | Score With | Score Without | Delta | Key Observation |
+| -------------------- | ---------- | ------------- | ----- | --------------- |
+| OWASP Mapping        | E1: ?      | A1: ?         | ?     |                 |
+| AI Analysis          | E1: ?      | A2: ?         | ?     |                 |
+| Hallucination Guard  | E1: ?      | A3: ?         | ?     |                 |
+| Contextual Weighting | E1: ?      | A4: ?         | ?     |                 |
 
 ### Table 4: Lifecycle Delta (Remediation Cycle)
 
-| Metric | L1 (Pre-remediation) | L3 (Post-remediation) | Change |
-|--------|---------------------|----------------------|--------|
-| Score | | | |
-| Grade | | | |
-| Total vulns | | | |
-| Resolved | — | | |
-| Persisting | — | | |
-| New | — | | |
-| OWASP categories | | | |
+| Metric           | L1 (Pre-remediation) | L3 (Post-remediation) | Change |
+| ---------------- | -------------------- | --------------------- | ------ |
+| Score            |                      |                       |        |
+| Grade            |                      |                       |        |
+| Total vulns      |                      |                       |        |
+| Resolved         | —                    |                       |        |
+| Persisting       | —                    |                       |        |
+| New              | —                    |                       |        |
+| OWASP categories |                      |                       |        |
 
 ### Table 5: Hallucination Metrics Longitudinal
 
-| Test ID | Target | Total Analysed | Trust Score | OWASP Disagree % | Confidence Mismatch % | Fabricated CVEs |
-|---------|--------|---------------|-------------|-------------------|----------------------|-----------------|
-| H1 | localhost | | | | | |
-| H2 | vulnweb | | | | | |
-| H3 | testfire | | | | | |
-| H4 | localhost (post-rem) | | | | | |
+| Test ID | Target               | Total Analysed | Trust Score | OWASP Disagree % | Confidence Mismatch % | Fabricated CVEs |
+| ------- | -------------------- | -------------- | ----------- | ---------------- | --------------------- | --------------- |
+| H1      | localhost            |                |             |                  |                       |                 |
+| H2      | vulnweb              |                |             |                  |                       |                 |
+| H3      | Mutillidae           |                |             |                  |                       |                 |
+| H4      | localhost (post-rem) |                |             |                  |                       |                 |
 
 ### Table 6: Scan Consistency (B1 vs B2, B3 vs B4)
 
-| Pair | Score Match? | Vuln Count Match? | OWASP Cats Match? | Discrepancies (if any) |
-|------|-------------|-------------------|-------------------|----------------------|
-| B1 vs B2 | | | | |
-| B3 vs B4 | | | | |
+| Pair     | Score Match? | Vuln Count Match? | OWASP Cats Match? | Discrepancies (if any) |
+| -------- | ------------ | ----------------- | ----------------- | ---------------------- |
+| B1 vs B2 |              |                   |                   |                        |
+| B3 vs B4 |              |                   |                   |                        |
 
 ---
 
