@@ -72,7 +72,7 @@ function createWindow() {
     mainWindow.loadFile(path.join(RENDERER_DIST, 'index.html'))
   }
 
-  // Register F12 to toggle DevTools
+  // Register keyboard shortcuts
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.key === 'F12' && input.type === 'keyDown') {
       if (mainWindow?.webContents.isDevToolsOpened()) {

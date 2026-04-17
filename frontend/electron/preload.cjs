@@ -1,4 +1,21 @@
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer, webFrame } = require('electron')
+
+const ZOOM_STEP = 0.1
+const MIN_ZOOM = 0.5
+const MAX_ZOOM = 3
+
+// Let users zoom app content with Ctrl + mouse wheel for readable screenshots.
+window.addEventListener('wheel', (event) => {
+  if (!event.ctrlKey) {
+    return
+  }
+
+  event.preventDefault()
+  const currentZoom = webFrame.getZoomFactor()
+  const delta = event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP
+  const nextZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, currentZoom + delta))
+  webFrame.setZoomFactor(nextZoom)
+}, { passive: false })
 
 // Expose secure APIs to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
