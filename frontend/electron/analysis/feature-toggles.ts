@@ -6,8 +6,8 @@
 export const FEATURE_TOGGLES = {
   owaspMapping: true,          // deterministic keyword OWASP classification
   aiAnalysis: true,            // Gemini LLM enrichment
-  hallucinationGuard: false,    // post-AI validation layer
-  contextualWeighting: true,   // Extension 4 exploitability multipliers
+  hallucinationGuard: true,    // post-AI validation layer
+  contextualWeighting: false,   // Extension 4 exploitability multipliers
   deltaComparison: true,       // scan-to-scan comparison
 }
 

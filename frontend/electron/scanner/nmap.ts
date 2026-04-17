@@ -6,9 +6,14 @@ import type { NmapScanData, PortResult, VulnerabilityResult } from './types'
 import { calculateSecurityScore } from '../analysis/security-scorer'
 import { getOWASPCoverage, getOWASPDistribution } from '../analysis/owasp-mapper'
 import { getToggleSnapshot } from '../analysis/feature-toggles'
+import { getScansDir, getAllowedTargetsPath } from '../paths'
 
-// Directory for storing scan results
-const SCANS_DIR = path.join(process.cwd(), 'data', 'scans')
+// Directory for storing scan results — resolved at call time via shared paths module
+let _scansDir: string | null = null
+function getScansDirectory(): string {
+  if (!_scansDir) _scansDir = getScansDir()
+  return _scansDir
+}
 
 // Cache for Nmap executable path
 let nmapPath: string | null = null
@@ -27,7 +32,7 @@ async function findNmapPath(): Promise<string> {
       'C:\\Program Files (x86)\\Nmap\\nmap.exe',
       'C:\\Program Files\\Nmap\\nmap.exe',
     ]
-    : ['nmap', '/usr/bin/nmap', '/usr/local/bin/nmap', '/opt/homebrew/bin/nmap']
+    : ['nmap', '/usr/bin/nmap', '/usr/sbin/nmap', '/usr/local/bin/nmap', '/opt/homebrew/bin/nmap']
 
   for (const testPath of possiblePaths) {
     try {
@@ -73,7 +78,7 @@ export function abortScan(): { success: boolean; message: string } {
 // Ensure scans directory exists
 async function ensureScansDir(): Promise<void> {
   try {
-    await fs.mkdir(SCANS_DIR, { recursive: true })
+    await fs.mkdir(getScansDirectory(), { recursive: true })
   } catch (err) {
     console.error('Failed to create scans directory:', err)
   }
@@ -307,7 +312,7 @@ export async function runNmapScan(
   // Top 100 ports · service detection · default + vuln scripts
   // Expected: ~2–4 minutes
   // ═══════════════════════════════════════════════════════════
-  const phase1File = path.join(SCANS_DIR, `scan-${timestamp}.xml`)
+  const phase1File = path.join(getScansDirectory(), `scan-${timestamp}.xml`)
   const phase1Args = [
     ...(useConnectScan ? ['-sT'] : []),
     '-sV', '-sC', '-T4', explicitPortArg,
@@ -344,7 +349,7 @@ export async function runNmapScan(
   // All 65 535 ports · SQL injection · XSS · CSRF · enumeration
   // Expected: ~10–25 minutes
   // ═══════════════════════════════════════════════════════════
-  const phase2File = path.join(SCANS_DIR, `scan-${timestamp}-deep.xml`)
+  const phase2File = path.join(getScansDirectory(), `scan-${timestamp}-deep.xml`)
   const deepScripts = [
     'vuln', 'vulners',
     'http-sql-injection', 'http-stored-xss', 'http-dombased-xss',
@@ -408,16 +413,17 @@ export async function runNmapScan(
  */
 export async function getScanHistory(): Promise<NmapScanData[]> {
   await ensureScansDir()
+  const scansDir = getScansDirectory()
 
   try {
-    const files = await fs.readdir(SCANS_DIR)
+    const files = await fs.readdir(scansDir)
     const jsonFiles = files.filter((f) => f.endsWith('.json')).sort().reverse()
 
     const scans: NmapScanData[] = []
     for (const file of jsonFiles.slice(0, 20)) {
       // Last 20 scans
       try {
-        const content = await fs.readFile(path.join(SCANS_DIR, file), 'utf-8')
+        const content = await fs.readFile(path.join(scansDir, file), 'utf-8')
         const scanData = JSON.parse(content) as NmapScanData
 
         // Clean up old scans: remove "negative" results that were saved before filtering was added
@@ -437,7 +443,7 @@ export async function getScanHistory(): Promise<NmapScanData[]> {
           if (scanData.vulnerabilities.length !== before) {
             console.log(`[Scanner] Cleaned ${before - scanData.vulnerabilities.length} negative results from old scan`)
             // Re-save cleaned data
-            await fs.writeFile(path.join(SCANS_DIR, file), JSON.stringify(scanData, null, 2))
+            await fs.writeFile(path.join(scansDir, file), JSON.stringify(scanData, null, 2))
           }
         }
 
@@ -449,7 +455,7 @@ export async function getScanHistory(): Promise<NmapScanData[]> {
           scanData.owaspDistribution = getOWASPDistribution(scanData.vulnerabilities)
 
           // Save updated scan with scores
-          await fs.writeFile(path.join(SCANS_DIR, file), JSON.stringify(scanData, null, 2))
+          await fs.writeFile(path.join(scansDir, file), JSON.stringify(scanData, null, 2))
         }
 
         scans.push(scanData)
@@ -469,7 +475,7 @@ export async function getScanHistory(): Promise<NmapScanData[]> {
  */
 export async function validateTarget(target: string): Promise<{ allowed: boolean; target: string; requiresDisclaimer: boolean }> {
   // Load known safe targets list
-  const allowlistPath = path.join(process.cwd(), 'allowed-targets.json')
+  const allowlistPath = getAllowedTargetsPath()
 
   const knownSafePatterns = ['testphp.vulnweb.com', 'localhost', '127.0.0.1', '::1']
 
@@ -494,11 +500,12 @@ export async function validateTarget(target: string): Promise<{ allowed: boolean
  */
 export async function deleteScan(timestamp: string): Promise<{ success: boolean; message?: string }> {
   await ensureScansDir()
+  const scansDir = getScansDirectory()
 
   try {
     // Find files by reading JSON files and matching the timestamp field
     // The filename timestamp is the scan start time, but the JSON contains the completion timestamp
-    const files = await fs.readdir(SCANS_DIR)
+    const files = await fs.readdir(scansDir)
     const jsonFiles = files.filter(f => f.endsWith('.json'))
 
     let matchedFile: string | null = null
@@ -506,7 +513,7 @@ export async function deleteScan(timestamp: string): Promise<{ success: boolean;
     // Search through JSON files to find one with matching timestamp
     for (const jsonFile of jsonFiles) {
       try {
-        const content = await fs.readFile(path.join(SCANS_DIR, jsonFile), 'utf-8')
+        const content = await fs.readFile(path.join(scansDir, jsonFile), 'utf-8')
         const scanData = JSON.parse(content)
         if (scanData.timestamp === timestamp) {
           matchedFile = jsonFile
@@ -529,7 +536,7 @@ export async function deleteScan(timestamp: string): Promise<{ success: boolean;
 
     // Delete all related files (JSON + XML + deep XML)
     for (const file of relatedFiles) {
-      const filePath = path.join(SCANS_DIR, file)
+      const filePath = path.join(scansDir, file)
       await fs.unlink(filePath)
       console.log(`[Scanner] Deleted scan file: ${file}`)
     }

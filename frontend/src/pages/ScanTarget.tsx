@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Crosshair, AlertTriangle, Check, Loader2, ArrowRight, Brain, Zap, Circle, ChevronDown, ChevronUp, Square, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, Check, Loader2, ArrowRight, Circle, ChevronDown, ChevronUp, Square, ShieldAlert } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useScanStore } from '../lib/useScanStore'
 import type { ScanState } from '../lib/scanStore'

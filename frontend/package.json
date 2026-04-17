@@ -2,11 +2,18 @@
   "name": "purpleteam-suite",
   "private": true,
   "version": "1.0.0",
+  "description": "AI-powered penetration testing suite with Nmap integration",
+  "author": "PurpleTeam Suite",
+  "homepage": "https://github.com/purpleteam-suite",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && electron-builder",
+    "build:win": "tsc -b && vite build && electron-builder --win",
+    "build:mac": "tsc -b && vite build && electron-builder --mac",
+    "build:linux": "tsc -b && vite build && electron-builder --linux",
+    "build:all": "tsc -b && vite build && electron-builder --win --mac --linux",
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:dev": "vite build && electron ."
@@ -59,14 +66,48 @@
       "dist/**/*",
       "dist-electron/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "../.env",
+        "to": ".env"
+      },
+      {
+        "from": "allowed-targets.json",
+        "to": "allowed-targets.json"
+      }
+    ],
+    "extraFiles": [
+      {
+        "from": "public/icon.png",
+        "to": "resources/icon.png"
+      }
+    ],
+    "asar": true,
     "win": {
-      "target": "nsis"
+      "target": [
+        "nsis"
+      ],
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
     },
     "mac": {
-      "target": "dmg"
+      "target": [
+        "dmg"
+      ],
+      "icon": "public/icon.png",
+      "category": "public.app-category.developer-tools"
     },
     "linux": {
-      "target": "AppImage"
+      "target": [
+        "tar.gz"
+      ],
+      "icon": "public/icon.png",
+      "category": "Development",
+      "maintainer": "PurpleTeam Suite"
     }
   }
 }

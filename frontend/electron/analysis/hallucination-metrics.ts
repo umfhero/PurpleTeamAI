@@ -4,6 +4,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { HallucinationReport } from './hallucination-guard'
+import { getMetricsPath } from '../paths'
 
 // ============================================
 // Types
@@ -77,7 +78,10 @@ export interface HallucinationMetricsAggregate {
 // Data Directory
 // ============================================
 
-const METRICS_PATH = path.join(process.cwd(), 'data', 'hallucination-metrics.json')
+// Metrics file path — resolved at call time via shared paths module
+function getMetricsFilePath(): string {
+  return getMetricsPath()
+}
 
 // ============================================
 // Metrics Extraction
@@ -138,13 +142,14 @@ export function extractMetrics(
  * Creates the file if it doesn't exist.
  */
 export async function saveMetricsEntry(entry: HallucinationMetricsEntry): Promise<void> {
-  console.log(`[HallucinationMetrics] Attempting to save metrics to: ${METRICS_PATH}`)
+  const metricsPath = getMetricsFilePath()
+  console.log(`[HallucinationMetrics] Attempting to save metrics to: ${metricsPath}`)
   try {
-    await fs.mkdir(path.dirname(METRICS_PATH), { recursive: true })
+    await fs.mkdir(path.dirname(metricsPath), { recursive: true })
 
     let entries: HallucinationMetricsEntry[] = []
     try {
-      const existing = await fs.readFile(METRICS_PATH, 'utf-8')
+      const existing = await fs.readFile(metricsPath, 'utf-8')
       entries = JSON.parse(existing)
     } catch {
       // File doesn't exist yet
@@ -156,7 +161,7 @@ export async function saveMetricsEntry(entry: HallucinationMetricsEntry): Promis
       entries.push(entry)
     }
 
-    await fs.writeFile(METRICS_PATH, JSON.stringify(entries, null, 2), 'utf-8')
+    await fs.writeFile(metricsPath, JSON.stringify(entries, null, 2), 'utf-8')
     console.log(`[HallucinationMetrics] Saved metrics for scan ${entry.scanTimestamp} (trust=${entry.trustScore})`)
   } catch (error) {
     console.error('[HallucinationMetrics] Failed to save metrics:', error)
@@ -168,7 +173,7 @@ export async function saveMetricsEntry(entry: HallucinationMetricsEntry): Promis
  */
 export async function loadMetricsHistory(): Promise<HallucinationMetricsEntry[]> {
   try {
-    const data = await fs.readFile(METRICS_PATH, 'utf-8')
+    const data = await fs.readFile(getMetricsFilePath(), 'utf-8')
     return JSON.parse(data)
   } catch {
     return []

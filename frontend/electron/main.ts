@@ -9,14 +9,15 @@ import { generateHallucinationReport } from './analysis/hallucination-guard'
 import { extractMetrics, saveMetricsEntry, loadMetricsHistory, aggregateMetrics } from './analysis/hallucination-metrics'
 import { groupScansByTarget, computeAllDeltas } from './analysis/delta-comparison'
 import { FEATURE_TOGGLES, getToggleSnapshot } from './analysis/feature-toggles'
+import { getScansDir } from './paths'
 import type { LLMAnalysisRequest } from './llm'
 import type { ReportOptions } from './reports'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// Load environment variables from .env file in the project root
+// Load environment variables from .env file
 // In development, .env is at project root (two levels up from dist-electron)
-// In production, it should be bundled or use a different approach
+// In production, .env is bundled via extraResources into resources/
 const envPath = app.isPackaged
   ? path.join(process.resourcesPath, '.env')
   : path.join(__dirname, '../../.env')
@@ -231,7 +232,7 @@ ipcMain.handle('scanner:save-scan', async (_event, scanData: any) => {
     return { success: false, error: 'Missing scan timestamp' }
   }
   try {
-    const SCANS_DIR = path.join(process.cwd(), 'data', 'scans')
+    const SCANS_DIR = getScansDir()
     const fs = await import('node:fs/promises')
     const matchedFile = await findScanFileByTimestamp(SCANS_DIR, scanData.timestamp)
     if (!matchedFile) {
@@ -322,7 +323,7 @@ ipcMain.handle('llm:analyze-vulnerabilities', async (_event, request: LLMAnalysi
       // Also persist LLM results directly into the scan JSON file
       // so the data survives page reloads without needing a frontend roundtrip
       try {
-        const SCANS_DIR = path.join(process.cwd(), 'data', 'scans')
+        const SCANS_DIR = getScansDir()
         const fsP = await import('node:fs/promises')
         const matchedFile = await findScanFileByTimestamp(SCANS_DIR, request.scanTimestamp)
         if (matchedFile) {

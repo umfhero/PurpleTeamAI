@@ -27,7 +27,7 @@ export default function Reports() {
   const [viewMode, setViewMode] = useState<'full' | 'comparison'>('full')
   const [selectedDelta, setSelectedDelta] = useState<{ olderTimestamp: string; newerTimestamp: string } | null>(null)
 
-  const [reportFilePath, setReportFilePath] = useState<string | null>(null)
+  const [_reportFilePath, setReportFilePath] = useState<string | null>(null)
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
