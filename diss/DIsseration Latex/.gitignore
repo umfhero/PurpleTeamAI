@@ -1,0 +1,22 @@
+# LaTeX auxiliary files
+build/
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+
+# Temporary files
+*~
+*.backup
+
+# Optional: Uncomment below to also ignore the compiled PDF
+# *.pdf

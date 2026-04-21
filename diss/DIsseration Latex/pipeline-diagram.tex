@@ -1,0 +1,127 @@
+% ============================================================
+% Pipeline Architecture Diagram — TikZ
+% Place this in your LaTeX preamble (or a separate .tex file):
+%   \usepackage{tikz}
+%   \usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit}
+%
+% Then \input{pipeline-diagram.tex} where you want the figure,
+% or paste the figure environment directly into Chapter 3.
+% ============================================================
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    % Node styles
+    stage/.style={
+        rectangle,
+        rounded corners=3pt,
+        draw=black!70,
+        fill=blue!8,
+        text width=5.8cm,
+        minimum height=0.85cm,
+        align=center,
+        font=\small
+    },
+    module/.style={
+        draw=black!20,
+        rounded corners=2pt,
+        fill=white,
+        inner xsep=3pt,
+        inner ysep=1.2pt,
+        font=\footnotesize\itshape,
+        text=black!55
+    },
+    arrow/.style={
+        -{Stealth[length=2.5mm]},
+        thick,
+        black!60
+    },
+    phaselabel/.style={
+        font=\scriptsize\bfseries,
+        text=black!50,
+        anchor=east
+    },
+    groupbox/.style={
+        rectangle,
+        rounded corners=4pt,
+        draw=black!25,
+        dashed,
+        inner sep=8pt
+    },
+    grouplabel/.style={
+        fill=white,
+        inner xsep=4pt,
+        inner ysep=1.5pt,
+        font=\small\bfseries,
+        text=black!45
+    },
+    deltalabel/.style={
+        fill=white,
+        inner xsep=3pt,
+        inner ysep=1.2pt,
+        font=\small\bfseries,
+        text=black!45
+    }
+]
+
+% --- Nodes (top to bottom) ---
+
+% Discovery group
+\node[stage] (validate) {1. Target Validation \\ {\scriptsize Allowlist enforcement}};
+\node[module, right=0.35cm of validate.east, anchor=west] {scanner/};
+
+\node[stage, below=0.4cm of validate] (phase1) {2. Phase 1 Scan \\ {\scriptsize Top 100 ports, fast}};
+\node[module, right=0.35cm of phase1.east, anchor=west] {nmap.ts};
+
+\node[stage, below=0.4cm of phase1] (phase2) {3. Phase 2 Scan \\ {\scriptsize All 65{,}535 ports, thorough}};
+
+\node[stage, below=0.4cm of phase2] (parse) {4. Parse and Merge \\ {\scriptsize XML $\rightarrow$ structured JSON}};
+\node[module, right=0.35cm of parse.east, anchor=west] {parser.ts};
+
+% Analysis group
+\node[stage, below=1.25cm of parse, fill=green!8] (owasp) {5. OWASP Classification \\ {\scriptsize Deterministic keyword matching}};
+\node[module, right=0.35cm of owasp.east, anchor=west] {owasp-mapper.ts};
+
+\node[stage, below=0.4cm of owasp, fill=green!8] (score) {6. Security Scoring \\ {\scriptsize Exploitability-aware weighting}};
+\node[module, right=0.35cm of score.east, anchor=west] {security-scorer.ts};
+
+% AI group
+\node[stage, below=1.25cm of score, fill=orange!10] (ai) {7. AI Analysis \\ {\scriptsize Gemini API, structured JSON schema}};
+\node[module, right=0.35cm of ai.east, anchor=west] {gemini.ts};
+
+\node[stage, below=0.4cm of ai, fill=orange!10] (guard) {8. Hallucination Guard \\ {\scriptsize Cross-validation, trust scoring}};
+\node[module, right=0.35cm of guard.east, anchor=west] {hallucination-guard.ts};
+
+% Output
+\node[stage, below=0.7cm of guard, fill=gray!10] (report) {9. Report Generation \\ {\scriptsize Exportable PDF, delta comparison}};
+\node[module, right=0.35cm of report.east, anchor=west] {reports/};
+
+% --- Arrows ---
+\draw[arrow] (validate) -- (phase1);
+\draw[arrow] (phase1) -- (phase2);
+\draw[arrow] (phase2) -- (parse);
+\draw[arrow] (parse) -- (owasp);
+\draw[arrow] (owasp) -- (score);
+\draw[arrow] (score) -- (ai);
+\draw[arrow] (ai) -- (guard);
+\draw[arrow] (guard) -- (report);
+
+% --- Group boxes ---
+\node[groupbox, fit=(validate)(phase2)(parse), inner sep=8pt] (discbox) {};
+\node[grouplabel, above=0.16cm of discbox.north, anchor=south] {Discovery};
+
+\node[groupbox, fit=(owasp)(score), inner sep=8pt] (analbox) {};
+\node[grouplabel, above=0.10cm of analbox.north, anchor=south] {Analysis};
+
+\node[groupbox, fit=(ai)(guard), inner sep=8pt] (aibox) {};
+\node[grouplabel, above=0.10cm of aibox.north, anchor=south] {AI Enrichment};
+
+% --- Feedback arrow for delta comparison ---
+\draw[-{Stealth[length=2.5mm]}, thick, black!35, dashed]
+    (report.west) -- ++(-1.2,0) |- node[deltalabel, pos=0.25, left, text=black!40] {Delta comparison}
+    (validate.west);
+
+\end{tikzpicture}
+\caption{PurpleTeam Suite pipeline architecture. Each stage is implemented as an independent module. The dashed feedback arrow represents the iterative scan-remediate-rescan lifecycle supported by the delta comparison system.}
+\label{fig:pipeline}
+\end{figure}

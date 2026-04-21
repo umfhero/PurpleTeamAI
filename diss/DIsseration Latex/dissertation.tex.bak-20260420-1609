@@ -1,0 +1,2052 @@
+%% ============================================================
+%%  PurpleTeam Suite — Dissertation
+%%  Middlesex University  |  CST3590
+%%  Author : Umar Majid, Faiz M01031005
+%%  Engine : pdfLaTeX + BibLaTeX (IEEE)
+%%  Overleaf compiler : pdfLaTeX
+%% ============================================================
+
+\documentclass[12pt, a4paper, oneside]{report}
+
+% ── Encoding & fonts ─────────────────────────────────────────
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+
+% ── Page geometry ────────────────────────────────────────────
+\usepackage[
+  top=25mm,
+  bottom=25mm,
+  left=30mm,
+  right=25mm,
+  headheight=14pt
+]{geometry}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+
+% ── Table colour palette ──────────────────────────────────────
+\definecolor{headerblue}{RGB}{41, 65, 94}
+\definecolor{headertext}{RGB}{255, 255, 255}
+\definecolor{rowlight}{RGB}{245, 247, 250}
+\definecolor{rowwhite}{RGB}{255, 255, 255}
+
+% ── Line spacing (1.5 recommended for dissertations) ─────────
+\usepackage{setspace}
+\onehalfspacing
+
+% ── Headers / footers ────────────────────────────────────────
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\leftmark}
+\fancyhead[R]{\small\thepage}
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0pt}
+  \fancyhead[R]{\small\thepage}
+}
+
+% ── Hyperlinks (clickable citations, TOC, cross-refs) ─────────
+\usepackage[
+  colorlinks = true,
+  linkcolor  = black,
+  citecolor  = blue,
+  urlcolor   = blue,
+  bookmarks  = true,
+  pdfauthor  = {Majid Faiz Umar},
+  pdftitle   = {Automating the Purple Team Lifecycle}
+]{hyperref}
+
+% ── IEEE bibliography via BibLaTeX ────────────────────────────
+\usepackage[
+  backend  = biber,
+  style    = ieee,
+  sorting  = nyt,   % alphabetical: Name → Year → Title
+  doi      = true,
+  url      = true,
+  maxnames = 6
+]{biblatex}
+\addbibresource{refs.bib}
+
+% ── Misc packages ────────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{pifont}           % \ding cross marks in tables
+\usepackage{makecell}         % \makecell for rotated table headers
+\usepackage{enumitem}
+\usepackage{listings}        % code listings if needed
+\usepackage{microtype}
+\usepackage{parskip}         % space between paragraphs, no indent
+\usepackage{float}           % [H] placement for strict figure positioning
+\usepackage{placeins}        % \FloatBarrier to keep floats within section blocks
+\usepackage[toc,page]{appendix}
+
+% ── Chapter heading style ─────────────────────────────────────
+\usepackage{titlesec}
+\titleformat{\chapter}[hang]
+  {\normalfont\Huge\bfseries}{\thechapter.\quad}{0pt}{}
+\titlespacing*{\chapter}{0pt}{-40pt}{14pt}
+
+% ── Title metadata ────────────────────────────────────────────
+\title{Automating the Purple Team Lifecycle, an Integrated Deterministic AI Framework for Vulnerability Discovery, Prioritisation, and Remediation Guidance}
+\author{Majid Faiz Umar}
+\date{}
+
+%% ============================================================
+\begin{document}
+%% ============================================================
+
+% ── Title page ───────────────────────────────────────────────
+\begin{titlepage}
+  \centering
+
+  % University at the top
+  {\large\bfseries Middlesex University\par}
+  {\normalsize Department of Computer Science\par}
+  \vspace{0.4cm}
+  \rule{\linewidth}{0.4pt}
+
+  \vfill
+
+  % Title
+  {\LARGE\bfseries Automating the Purple Team Lifecycle:\\[0.3em]
+  An Integrated Deterministic AI Framework for\\[0.3em]
+  Vulnerability Discovery, Prioritisation, and Remediation Guidance\par}
+
+  \vspace{1.2cm}
+
+  % Submission statement
+  {\normalsize A dissertation submitted in partial fulfilment of the requirements\\[0.3em]
+  for the degree of\par}
+  \vspace{0.4cm}
+  {\large\bfseries Bachelor of Science (Honours)\\[0.2em]
+  Cyber Security and Digital Forensics\par}
+
+  \vfill
+
+  % Module
+  {\normalsize CST3590 — Individual Project (Dissertation)\par}
+
+  \vspace{1.2cm}
+  \rule{\linewidth}{0.4pt}
+  \vspace{0.5cm}
+
+  % Student details
+  \begin{tabular}{rl}
+    \textbf{Student Name:} & Umar, Majid Faiz \\
+    \textbf{Student ID:}   & M01031005 \\
+    \textbf{Supervisor:}   & David Neilson \\
+  \end{tabular}
+
+  \vspace{0.8cm}
+  \rule{\linewidth}{0.4pt}
+
+\end{titlepage}
+
+% ── Prefatory matter (roman numerals) ────────────────────────
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+% ── Declaration ──────────────────────────────────────────────
+\chapter*{Declaration}
+\addcontentsline{toc}{chapter}{Declaration}
+
+I declare that this dissertation is my own work and has not been
+submitted in whole or in part for any other degree or professional
+qualification. All sources of information have been acknowledged and
+referenced in accordance with IEEE referencing standards. I confirm that
+this work complies with Middlesex University's regulations on academic
+integrity and the appropriate use of artificial intelligence tools.
+
+\vspace{2cm}
+
+\noindent
+\begin{tabular}{@{}lll@{}}
+  \textbf{Name:} & \multicolumn{2}{l}{Umar, Majid Faiz} \\[1.2em]
+  \textbf{Signature:} & \raisebox{-0.3cm}{\includegraphics[height=1.8cm]{product/signature}} &
+  \hspace{1cm}\textbf{Date:} \quad 24 April 2026 \\
+\end{tabular}
+
+
+% ── Abstract ─────────────────────────────────────────────────
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+% ── Acknowledgements ─────────────────────────────────────────
+\chapter*{Acknowledgements}
+\addcontentsline{toc}{chapter}{Acknowledgements}
+
+% ── Table of contents ─────────────────────────────────────────
+\tableofcontents
+\listoffigures
+\listoftables
+
+% ── Main matter (arabic numerals) ────────────────────────────
+\cleardoublepage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+%% ============================================================
+\chapter{Introduction}
+%% ============================================================
+
+The growth of AI-assisted software development has significantly
+increased development speed and productivity~\cite{sarkar2025}. Large
+language models are now widely used to generate application code,
+automate documentation and even assist with debugging~\cite{sarkar2025}.
+Due to this, research has strongly suggested that the increase of
+AI-generated code can not only introduce security vulnerabilities,
+insecure configurations but also poor validation practices~\cite{singh2024}.
+
+As AI-assisted development increases, so does the potential attack
+surface of modern web systems. Vulnerabilities may be introduced faster
+than they are detected and remediated. Traditional security testing
+approaches, such as manual penetration testing and purple team
+collaboration, aim to identify and reduce these risks~\cite{oakley2019}.
+However, these processes often involve manual triage, fragmented tooling
+and significant analyst effort.
+
+Existing security tools can typically focus on isolated stages of the
+vulnerability lifecycle, such as detection or reporting~\cite{chalvatzis2019}.
+Few systems show promise to integrate discovery, prioritisation,
+remediation guidance and reassessment within a single structured
+workflow~\cite{vandeleur2026}. AI can assist in explaining findings and
+generating remediation steps~\cite{ijrah2026,khandagale2025}, but
+unfortunately, AI systems introduce reliability risks such as
+hallucinated classifications or fabricated vulnerability
+references~\cite{farquhar2024}.
+
+Consequently, there is a need for a structured framework that combines
+deterministic security analysis with controlled AI assistance, while
+maintaining validation mechanisms and supporting iterative reassessment. This project investigates whether a deterministic-first, AI-assisted
+purple team framework could improve this lifecycle integration, maintain
+accurate vulnerability classification and provide reliable remediation
+guidance within authorised web environments.
+
+% ── 1.1 ──────────────────────────────────────────────────────
+\section{Background \& Context}
+
+Modern vulnerability management workflows operate across multiple
+disconnected stages, including automated discovery, severity scoring,
+contextual analysis, remediation planning and validation. Although each
+stage has matured independently, integration across the full lifecycle
+remains inconsistent. Security scanners can reliably extract technical
+artefacts such as open ports, service versions, CVE references, and
+misconfigurations. These tools are deterministic and reproducible, but
+their outputs are often verbose and lack contextual prioritisation or
+actionable remediation structure.
+
+Severity scoring systems such as CVSS provide numerical estimates of
+impact and exploitability, yet they function as static metrics rather
+than adaptive prioritisation mechanisms. In operational environments,
+exploitability depends not only on severity but also on exposure
+context, service configuration and organisation risk tolerance.
+Consequently, analysts must interpret raw findings, determine relevance,
+and translate technical evidence into remediation tasks. This manual
+interpretation step introduces variability, increases cognitive load and
+reduces scalability.
+
+Recent advances in large language models have introduced new
+possibilities for contextual interpretation of structured security data.
+Research suggests that LLMs can summarise vulnerability descriptions,
+explain technical findings in natural language, and propose remediation
+steps. However, these systems are inherently probabilistic. Unlike
+deterministic scanners, they may produce overconfident or even
+fabricated outputs if not constrained and validated. Reliability
+research has therefore emphasised structured prompting, schema
+enforcement and cross-verification mechanisms to mitigate hallucination
+risks.
+
+Despite these parallel developments, the vulnerability lifecycle remains
+structurally fragmented. Deterministic scanners focus on extraction,
+scoring frameworks focus on ranking, AI systems focus on explanation,
+and validation research focuses on output verification. Few approaches
+integrate these elements into a unified workflow that preserves
+deterministic evidence while incorporating probabilistic assistance in a
+controlled manner. Additionally, reassessment after remediation is often
+treated as a separate operational task rather than an embedded lifecycle
+component.
+
+This fragmentation creates a systemic gap between evidence generation
+and validated remediation. The absence of integrated lifecycle models
+limits the ability to combine reproducible classification, contextual
+prioritisation, structured AI guidance, hallucination validation and
+iterative reassessment within a coherent purple team process.
+
+Addressing this gap requires a framework that treats vulnerability
+management as a continuous pipeline rather than a sequence of isolated
+tools. Such an approach must preserve deterministic reliability while
+embedding controlled AI interpretation and explicit validation layers to
+ensure trustworthiness across the full lifecycle.
+
+% ── 1.2 ──────────────────────────────────────────────────────
+\section{Research Questions}
+
+Based on the identified research gap, this study is guided by the
+following research questions:
+
+\begin{enumerate}[label=\Roman*.]
+  \item To what extent can a deterministic-first, AI-assisted purple-team
+    framework maintain accurate vulnerability classification and structured
+    remediation guidance while introducing automated prioritisation and
+    reassessment capabilities?
+
+  \item How accurately can a hybrid deterministic and LLM fortification
+    classification mechanism map identified vulnerabilities to OWASP Top 10
+    categories, compared against known ground truth vulnerabilities within
+    controlled test environments?
+
+  \item Can structured hallucination mitigation and deterministic
+    cross-validation measurably reduce AI-generated classification
+    inconsistencies and fabricated vulnerability references within an
+    automated vulnerability assessment pipeline?
+\end{enumerate}
+
+% ── 1.3 ──────────────────────────────────────────────────────
+\section{Aims}
+
+The aim of this research is to design, implement, and empirically
+evaluate a deterministic-first, AI-assisted purple-team framework that
+integrates vulnerability discovery, exploitability-aware prioritisation,
+structured remediation guidance, hallucination mitigation, and iterative
+reassessment within a unified lifecycle model.
+
+\subsection{Objectives}
+
+\begin{enumerate}[label=\Alph*.]
+  \item To design a modular, reproducible vulnerability scanning pipeline.
+  \item To implement deterministic OWASP Top 10 classification logic.
+  \item To integrate a structured LLM fortification component with enforced
+    JSON schema validation and output constraints.
+  \item To implement a hallucination detection and trust scoring mechanism.
+  \item To evaluate classification accuracy, remediation quality and OWASP
+    coverage using authorised vulnerable targets.
+  \item To implement structured scan delta comparison for iterative
+    reassessment.
+  \item To introduce exploitability-aware weighting into the security
+    scoring model.
+\end{enumerate}
+
+\subsection{Deliverables}
+
+The primary deliverable of this research is a fully functional
+Electron-based desktop application implementing the proposed
+deterministic-first, AI-assisted purple-team framework.
+
+The system consists of a modular pipeline architecture incorporating a
+structured vulnerability scanning engine, deterministic OWASP Top 10
+classification module, exploitability-aware security scoring algorithm,
+AI-assisted remediation guidance component with enforced schema
+validation and a structured hallucination validation and trust scoring
+layer. The framework further includes an exportable PDF reporting
+system, iterative scan comparison and change summary module, with a
+hallucination evaluation metric logging component to support empirical
+analysis.
+
+Supporting deliverables include an evaluation dataset derived from
+authorised vulnerable environments and a defined empirical evaluation
+framework for measuring classification accuracy, remediation
+reliability, OWASP coverage, and validation performance.
+
+%% ============================================================
+\chapter{Literature Review}
+\label{sec:lit-review}
+%% ============================================================
+
+% ── 2.1 ──────────────────────────────────────────────────────
+\section{Introduction}
+
+Designing an automated vulnerability assessment pipeline requires making
+a series of constrained engineering decisions, and those decisions can
+only be made responsibly with an honest account of what prior work has
+achieved and where it falls short. This chapter surveys the existing
+literature across six themes that correspond directly to the pipeline
+stages of concern in this project: the maturity and limitations of
+automated scanning, the reliability of vulnerability scoring systems,
+the operational role of AI-assisted classification, the state of
+automated remediation, the tractability of LLM hallucination control,
+and the degree to which the purple team lifecycle has been integrated in
+practice.
+
+The purpose is not to summarise the field in isolation but to trace a
+line of cumulative constraint, from what detection can reliably produce,
+through what classification and scoring can responsibly claim, to what
+remediation and validation can currently deliver, because understanding
+that line of constraint is what determines what a new system needs to do
+differently and why.
+
+% ── 2.2 ──────────────────────────────────────────────────────
+\section{Detection Maturity and the Limits of \mbox{Automated} Scanning}
+
+Any pipeline that begins with automated scanning inherits the structural
+characteristics of the tools it depends upon, and those characteristics
+are worth understanding precisely rather than assuming. Singh et al.\
+validate Nmap as a scalable discovery instrument capable of high
+detection accuracy across simulated environments of varying complexity,
+which provides empirical grounding for treating it as a credible
+backbone for automated pipelines~\cite{singh2024}. This confirmation
+matters because the choice of scanner determines the shape of every
+downstream stage: the parser must accommodate its output format, the
+OWASP mapping layer must account for its coverage boundaries, and the
+scoring model must be calibrated against what it can and cannot find.
+Chalvatzis et al.\ extend the comparative picture by showing that Nmap
+completes network assessments faster than Nessus and OpenVAS, though at
+the cost of reduced CVE-linked coverage~\cite{chalvatzis2019}.
+This means that speed and coverage sit in a genuine tension rather than
+being simultaneously optimisable, a trade-off that a two-phase
+progressive scan design can partially manage but not eliminate.
+
+The limitations become more constraining when the scope moves from
+network-layer detection to web application logic. Althunayyan et al.\
+quantify these constraints directly, finding that OWASP ZAP achieved
+100\% precision against injection vulnerability classes but only 14 to
+29\% recall, where recall measures the proportion of actual
+vulnerabilities the scanner successfully detected, with Burp Suite
+performing at a similar level of recall
+failure~\cite{althunayyan2022}. The cause is a structural one: black-box
+scanners cannot maintain authenticated session state or traverse modern
+JavaScript-heavy application flows. Systematic false negatives for
+authenticated endpoints and sophisticated injection types are therefore
+not a correctable deficiency but an inherent boundary condition that any
+downstream process must accommodate.
+
+Mateo-Tudela et al.\ demonstrate that combining static, dynamic, and
+interactive testing paradigms improves the situation, with recall
+reaching approximately 70\% for XSS and 60\% for SQL injection, but
+note that even combined approaches leave a substantial proportion of
+attack surface undetected and that the correlation of results across
+tool types is not yet well supported by automated evaluation
+tooling~\cite{tudela2020}. Abdulghaffar et al.\ address the
+orchestration question directly, finding that running multiple scanners
+within a single platform improves aggregate coverage but introduces
+noise and inter-tool contradiction that require dedicated consolidation
+logic rather than simple result merging~\cite{abdulghaffar2023}.
+Redondo and Cuesta reinforce the operational conclusion, demonstrating
+that structured task representation and deterministic parsing of scanner
+output are conditions for repeatable, correct assessments rather than
+incidental implementation choices~\cite{redondo2019}.
+
+What the detection literature establishes, taken cumulatively, is that
+scanner outputs are incomplete by design, noisy in practice and require
+disciplined post-processing before they can serve as the evidence base
+for classification or scoring. The reviewed works address individual
+tool capabilities in depth but stop at the detection boundary, and none
+integrates the downstream stages of classification, scoring, or
+remediation into the same evaluation, which means the field has
+characterised what a pipeline can ingest but not what it should do with
+that input.
+
+% ── 2.3 ──────────────────────────────────────────────────────
+\section{Risk Scoring Models}
+
+Translating a set of raw vulnerability findings into an ordered
+remediation priority requires a scoring layer, and the decision of how
+to design that layer is directly shaped by the documented failures of
+existing scoring systems. Howland argues that CVSS, despite its
+near-universal adoption, conflates additive severity with topological
+exploitability risk, producing prioritisation decisions that are
+systematically miscalibrated against actual
+exposure~\cite{howland2023}. The practical consequence is that
+organisations applying CVSS scores directly to remediation queues will
+consistently over-prioritise low-exposure findings and under-prioritise
+findings where exploitability is high but the base score is moderate.
+
+Jacobs et al.\ support this empirically, showing that static severity
+scores are weak predictors of actual exploitation in the wild and that
+incorporating data-driven exploit probability signals substantially
+improves prioritisation accuracy~\cite{jacobs2023}. The implication for
+any scoring model is that severity alone is an insufficient signal and
+that contextual exposure factors, including port accessibility, service
+type, and the presence of authentication weaknesses, need to be weighted
+alongside raw score values.
+
+Koscinski et al.\ extend the critique by demonstrating that different
+scoring systems produce conflicting signals on the same dataset,
+concluding that any scoring mechanism should be treated as a transparent
+decision-support tool operating within acknowledged limitations rather
+than as an objective measure of risk~\cite{koscinski2025}. Lei et al.\
+address the aggregation dimension, showing that naive additive scoring
+across multiple vulnerabilities ignores dependency structures and attack
+paths, and proposing dependency-aware probabilistic approaches as a more
+defensible alternative~\cite{lei2024}.
+
+The practical constraint here is that attack graph modelling of the kind
+Lei et al.\ describe requires network topology data that is unavailable
+in black-box web scanning contexts. A scoring model for this pipeline
+must therefore find a middle ground between moving beyond raw additive
+CVSS and remaining operable without source access.
+
+Wen and Katt demonstrate that grounding scoring in the OWASP Application
+Security Verification Standard can provide checkable acceptance criteria
+and a structured quantitative evaluation framework~\cite{wen2023}.
+Sane provides an important limiting condition, showing empirically that
+the OWASP Top 10 is not a superset of commonly reported weaknesses in
+the National Vulnerability Database. Any taxonomy dependent on it must
+therefore be designed with the awareness that its coverage is partial
+rather than exhaustive~\cite{sane2020}.
+
+The scoring literature, read together, points towards a scoring model
+that incorporates weighted exploitability proxies, treats OWASP mapping
+as a useful but bounded classification layer, and makes its assumptions
+explicit rather than presenting its outputs as objective risk scores,
+which is both a design requirement and a limitation that needs to be
+acknowledged during evaluation.
+
+% ── 2.4 ──────────────────────────────────────────────────────
+\section{AI-Assisted Classification}
+
+The shift from rule-based vulnerability classification towards machine
+learning, and subsequently towards large language models, represents a
+genuine capability expansion, though the conditions under which that
+expansion is operationally useful are considerably more constrained than
+early work suggested. Le, Chen, and Babar provide the taxonomy that
+situates this shift, tracing the movement from static rule sets through
+classical ML-based prioritisation~\cite{le2022}. Their work establishes
+the research landscape within which LLM-based approaches now operate.
+
+Pan et al.\ demonstrate that automated CWE classification using ML
+classifiers is feasible and outpaces manual labelling in lexical
+coverage, but note that classifiers drift, learn spurious correlations
+from training data, and are difficult to audit post-deployment~\cite{pan2023}.
+The auditability problem is relevant to operational use because a
+classifier that cannot be inspected or constrained introduces an
+uncertainty that compounds with the uncertainty already present in
+scanner output, and the combined uncertainty is what the pipeline must
+manage.
+
+Lin et al.\ conduct a comparative evaluation of large language models on
+software vulnerability detection tasks, finding that whilst LLMs can
+perform classification, performance varies significantly across models,
+and the models frequently fail to produce explanations that are
+operationally actionable~\cite{lin2025}. This finding motivates a
+specific architectural decision, namely that scan discovery evidence
+needs to be kept structurally separate from LLM summarisation, because
+allowing the model to reason freely over unstructured scanner output
+risks producing inferences that are not grounded in what the scanner
+actually found.
+
+Chen et al.\ provide empirical support for this concern in the adjacent
+domain of smart contract detection, finding that ChatGPT achieves high
+recall but limited precision, with false positive costs that carry
+direct operational consequences~\cite{chen2024}. Neither study provides
+a mechanism for constraining model errors at inference time. The
+validation question therefore remains open, and it determines whether
+LLM integration into a security pipeline reduces or increases the triage
+burden on the analyst.
+
+The operational cost of unvalidated LLM output is characterised in
+detail by Alahmadi et al., whose qualitative SOC study finds that alert
+noise materially degrades analyst performance, increases cognitive
+fatigue, and causes genuine threats to be missed~\cite{alahmadi2022}.
+Kersten et al.\ extend this, demonstrating that investigation volume so
+constrains analyst workflow that concise, grounded signal extraction is
+an operational requirement rather than a design preference~\cite{kersten2026}.
+Taken together, these findings establish that AI-assisted classification
+is only operationally beneficial when the model's output is constrained
+to what the underlying evidence can support, which is a validation
+architecture requirement rather than merely a quality improvement.
+
+% ── 2.5 ──────────────────────────────────────────────────────
+\section{Remediation Automation}
+
+Automated remediation is the stage at which the gap between research
+capability and deployed reality is most pronounced, and understanding
+the shape of that gap is necessary before claiming to address it.
+Bhandari et al.\ provide one of the more rigorous treatments, tying
+LLM-generated patches to observable developer commit behaviour and
+demonstrating that specialised patch models outperform generic LLMs when
+correctness is evaluated against real acceptance criteria~\cite{bhandari2025}.
+Xu et al.\ complement this by showing that single-pass remediation
+generation consistently produces low-quality output and that iterative
+refinement loops with structured objectives produce measurably better
+results~\cite{xu2025}.
+
+Both contributions are significant, and both carry a constraint that
+limits their applicability to the present context: they assume access to
+the application's source code, which is a condition that does not hold
+in black-box web scanning. When the pipeline has no visibility into the
+codebase, remediation must be expressed as natural-language
+configuration guidance covering headers, TLS settings, authentication
+policies, and exposure reduction, rather than as generated patches.
+The correctness criteria, the evaluation methodology, and the validation
+requirements are therefore all different from those the patch generation
+literature addresses.
+
+The SOAR literature approaches this from the workflow side rather than
+the code generation side. Bridges et al.\ establish a precedent for
+evaluating security automation against human-centred metrics rather than
+purely technical ones, supporting the position that automated
+remediation quality should be assessed in terms of its effect on
+workflow efficiency and analyst burden rather than correctness
+alone~\cite{bridges2023}. Alahmadi et al.\ reinforce this from the
+analyst perspective, establishing that precision and structured parsing
+are operational safety requirements whose absence has a measurable cost
+in missed detections and increased fatigue~\cite{alahmadi2022}. The
+implication is that a remediation component generating plausible-sounding
+guidance that is ungrounded in scan evidence does not simply fail to
+help but actively degrades the signal quality that the rest of the
+pipeline has worked to establish.
+
+What the remediation literature as a whole reveals is a structural
+fragmentation: patch generation work does not address hallucination
+control, SOAR work does not address LLM-generated natural-language
+guidance, and no reviewed work closes the full loop from scanner output
+through classification, scoring, and validated natural-language
+remediation within a single deployable system. That fragmentation is
+what defines the implementation challenge.
+
+% ── 2.6 ──────────────────────────────────────────────────────
+\section{Hallucination and LLM Reliability}
+
+The hallucination problem in large language models is not a peripheral
+concern for a pipeline that uses LLM output as a component of a security
+assessment but a fundamental design constraint, because a remediation
+suggestion that is confidently stated but factually incorrect is not a
+neutral output. Rawte et al.\ characterise hallucination as a
+multi-modal failure requiring detection and constraint at the system
+level, arguing that guardrail architectures must reason about the
+model's underlying uncertainty rather than checking only the surface
+plausibility of its final outputs~\cite{rawte2023}. The distinction
+matters in practice because a model can produce a syntactically
+coherent, contextually appropriate remediation recommendation that is
+nevertheless unsupported by anything the scanner found, and
+surface-level plausibility checks will not catch that failure.
+
+Farquhar et al.\ operationalise a detection approach, demonstrating that
+semantic entropy, understood as a measure of uncertainty over meaning
+rather than over tokens, can serve as a principled signal for output
+restriction or abstention, offering a mechanism to suppress remediation
+claims that the model cannot reliably ground~\cite{farquhar2024}. The
+translational challenge they acknowledge is that converting semantic
+entropy into scanner-evidence checks requires domain-specific design
+work that their general-purpose framework does not provide. Luo et al.\
+introduce a different framing, demonstrating that hallucination
+behaviours can be actively exploited to produce vulnerable outcomes in
+generated code, which reframes hallucination not as an accuracy problem
+but as a security risk in contexts where the pipeline's output is acted
+upon directly~\cite{luo2025}. Dong et al.\ synthesise the guardrail
+vocabulary across the literature, formalising grounding, validation, and
+abstention as the three functional components of a reliable LLM
+architecture and concluding that effective guardrails must be layered
+and updated continuously~\cite{dong2025}. Hammar et al.\ bring this
+closest to a deployable design, treating hallucination control as a
+systems engineering problem with tunable consistency thresholds and
+demonstrating that restricting LLM output to claims consistent with an
+external evidence channel reduces both hallucination incidence and
+operational recovery time~\cite{hammar2026}.
+
+The consistent finding across this section of the literature is that LLM
+integration into operational pipelines is viable under the right
+architectural conditions, and that the key condition is the existence of
+a grounded external evidence channel against which model outputs can be
+validated. The reviewed works do not, however, use the structured output
+of a live vulnerability scanner as the evidence channel against which
+LLM claims are validated, which is precisely the approach taken in the
+hallucination guard described in Chapter~\ref{chap:method}.
+
+% ── 2.7 ──────────────────────────────────────────────────────
+\section{Purple Team Lifecycle Integration Gaps}
+
+The purple team lifecycle, understood as the coordinated and iterative
+cycle in which offensive and defensive activities inform each other
+rather than operating in isolation, provides the operational context
+within which an automated assessment pipeline ultimately needs to
+function, and the literature in this area is informative both for what
+it has addressed and for what it has not.
+
+Holm and Sommestad demonstrate empirically that automated threat
+emulators can preserve the learning value of red team exercises without
+the resource overhead of human attackers, with analysts unable to
+reliably distinguish automated activity from human-directed action in
+controlled exercises~\cite{holm2025}. Landauer et al.\ extend this by
+showing that automated attack execution can be designed to produce log
+artefacts statistically closer to those of human attackers, which is
+relevant because automation that generates easily attributable,
+unrealistic traces undermines the defensive feedback value of the
+exercise~\cite{landauer2026}. Bhattacharya et al.\ model offensive
+action selection as a reinforcement learning optimisation problem,
+producing attack sequences that outperform greedy baselines, a framing
+that is conceptually applicable to the sequencing of scanning phases as
+well as to adversary emulation~\cite{bhattacharya2020}.
+
+What this body of work establishes is that the offensive side of the
+purple lifecycle has received sustained and increasingly rigorous
+attention. The defensive and integration layers have not received
+equivalent treatment. None of the reviewed works integrates automated
+scanning, deterministic classification, AI-assisted summarisation,
+hallucination validation, and comparative reporting within a single
+framework that closes the loop from initial reconnaissance through to
+exportable findings. Hammar et al.\ come closest to this integration,
+but their architecture depends on access to a digital twin environment
+that is not available in black-box web scanning contexts~\cite{hammar2026}.
+
+The gap is not attributable to a single missing technique but to a
+structural pattern in which individual pipeline stages are addressed in
+isolation and the work of composing them into a coherent, deployable
+tool is consistently deferred. This is the gap this project is designed
+to address.
+
+% ── 2.8 ──────────────────────────────────────────────────────
+\section{Summary and Transition to Methodology}
+
+The six themes reviewed in this chapter converge on a consistent
+finding: each stage of the vulnerability assessment pipeline has been
+studied in some depth, but the pipeline as an integrated whole has not.
+Automated scanners produce incomplete, noisy output that requires
+structured post-processing before it can serve as an evidence
+base~\cite{singh2024,althunayyan2022,abdulghaffar2023,redondo2019}.
+Existing scoring systems conflate severity with exploitability in ways
+that lead to miscalibrated prioritisation, and the literature supports
+weighted, context-aware alternatives that treat their own limitations
+transparently~\cite{howland2023,jacobs2023,koscinski2025}.
+AI-assisted classification expands detection coverage but introduces
+false positive costs that are operationally damaging unless constrained
+by a validation architecture that keeps model inferences grounded in
+scanner evidence~\cite{lin2025,chen2024,alahmadi2022}. Automated
+remediation in black-box web scanning contexts requires natural-language
+configuration guidance rather than code generation, and no reviewed work
+addresses this combination within a validated
+pipeline~\cite{bhandari2025,xu2025}. The hallucination problem in LLMs
+is tractable under the right architectural conditions, but the reviewed
+works do not ground validation in the specific evidence channel that a
+scanner-based pipeline provides~\cite{farquhar2024,rawte2023,luo2025,hammar2026}.
+The purple team lifecycle, whilst increasingly well supported on its
+offensive side, lacks an integrated framework that closes the loop
+through to validated, exportable defensive
+findings~\cite{hammar2026,holm2025,landauer2026}.
+
+These gaps, taken together, define the implementation requirements for
+the system described in the following chapter.
+
+PurpleTeam Suite is a modular, Electron-based desktop application that
+addresses each of these constraints in sequence: a two-phase Nmap
+scanning pipeline with structured deterministic parsing, a weighted
+OWASP Top 10 classification and scoring layer that incorporates exposure
+and service-type factors, a Gemini-powered AI analysis component that
+operates on compressed structured evidence rather than raw text, a
+hallucination guard that cross-references model output against scan
+artefacts and assigns per-finding trust scores, and a reporting module
+that produces exportable comparative assessments including delta analysis
+across sequential scans of the same target. The design choices made at
+each stage follow directly from the constraints the literature
+establishes, and the evaluation criteria applied in Chapter~4 are drawn
+from the same evidence base.
+
+
+% ============================================================
+% Chapter 3 — Methodology
+% ============================================================
+
+\chapter{Methodology}
+\label{chap:method}
+
+\section{Research Approach}
+
+This project follows a development-oriented research methodology with quantitative empirical evaluation. The primary output is a working application, and the evaluation criteria are drawn from measurable performance indicators rather than subjective interpretation. This approach is appropriate because the research questions posed in Chapter 1 ask whether a deterministic-first, AI-assisted framework can maintain classification accuracy, provide structured remediation guidance and support iterative reassessment, and answering those questions requires building the system and then measuring what it produces under controlled conditions.
+
+The research employs primary data collection through controlled experimentation. All evaluation data is generated firsthand by executing the framework's pipeline against authorised vulnerable targets and recording the outputs at each stage. The data is quantitative: numerical scores, classification rates, hallucination metrics and vulnerability counts provide the evidence base for every evaluative claim made in Chapter 4. This positions the work within the experimental computing tradition identified in the module's research methodology guidance, where a prototype is developed, tested against defined criteria and evaluated against the constraints the literature establishes.
+
+The alternative approaches considered and rejected were survey-based evaluation, which would introduce subjective analyst opinion rather than reproducible measurement, and purely theoretical analysis, which could not demonstrate whether the proposed integration actually works in practice. The development-and-test approach was selected because the research gap identified in Chapter 2 is fundamentally an integration gap, and proving that an integration can work requires demonstrating it empirically rather than arguing for it in the abstract.
+
+
+\clearpage
+\section{System Design}
+\label{sec:system-design}
+
+\subsection{Requirements}
+ 
+The system was designed against the seven objectives defined in Section 1.3.1. Table \ref{tab:requirements} maps each objective to its corresponding pipeline module, classifies the requirement type and identifies the evaluation phase in which its fulfilment is verified. This traceability ensures that every component of the implementation has a defined purpose grounded in the research aims, and that every evaluative claim in Chapter 4 can be traced back to a stated requirement. 
+ 
+\begin{table}[htbp]
+\centering
+\caption{Requirements traceability matrix mapping proposal objectives to system modules and evaluation phases.}
+\label{tab:requirements}
+\footnotesize
+\renewcommand{\arraystretch}{1.5}
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{
+    >{\centering\arraybackslash}p{0.8cm}
+    >{\raggedright\arraybackslash}X
+    >{\raggedright\arraybackslash}p{3.2cm}
+    >{\centering\arraybackslash}p{2.0cm}
+    >{\raggedright\arraybackslash}p{3.3cm}
+}
+\toprule
+\rowcolor{headerblue}
+\textcolor{headertext}{\textbf{Obj.}} &
+\textcolor{headertext}{\textbf{Requirement}} &
+\textcolor{headertext}{\textbf{Module}} &
+\textcolor{headertext}{\textbf{Type}} &
+\textcolor{headertext}{\textbf{Evaluation}} \\
+\midrule
+\rowcolor{rowlight}
+A &
+Modular, reproducible scanning pipeline &
+Scanner (\path{nmap.ts}, \path{parser.ts}) &
+Func. &
+Phase 1: consistency (B1 vs B2) \\
+ 
+\rowcolor{rowwhite}
+B &
+Deterministic OWASP Top 10 classification &
+Analysis (\path{owasp-mapper.ts}) &
+Func. &
+Phase 3: ablation (A1) \\
+ 
+\rowcolor{rowlight}
+C &
+Structured LLM component with JSON schema enforcement &
+LLM (\path{gemini.ts}) &
+Func. &
+Phase 3: ablation (A2) \\
+ 
+\rowcolor{rowwhite}
+D &
+Hallucination detection and trust scoring &
+Analysis (\makecell[l]{\texttt{hallucination-}\\\texttt{guard.ts}}) &
+Non-functional &
+Phase 5: longitudinal (H1--H4) \\
+ 
+\rowcolor{rowlight}
+E &
+Evaluate classification accuracy, remediation quality and OWASP coverage &
+Evaluation framework &
+Proc. &
+Phases 1--5 \\
+ 
+\rowcolor{rowwhite}
+F &
+Structured scan delta comparison &
+Analysis (\path{delta-comparison.ts}) &
+Func. &
+Phase 4: lifecycle (L1--L4) \\
+ 
+\rowcolor{rowlight}
+G &
+Exploitability-aware scoring &
+Analysis (\path{security-scorer.ts}) &
+Func. &
+Phase 2: comparative (E1, E2) \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1.0}
+\end{table}
+ 
+Three requirement types are distinguished. Functional requirements (A, B, C, F, G) specify capabilities the system must implement and are verified by demonstrating correct output under controlled conditions. The non-functional requirement (D) specifies a quality attribute, namely that AI-generated outputs must be validated to a measurable trust threshold, and is verified through longitudinal metric accumulation. The procedural requirement (E) defines the evaluation methodology itself and is fulfilled by the five-phase framework described in Section 3.3.
+
+\subsection{Pipeline Architecture}
+
+PurpleTeam Suite implements a ten-stage linear pipeline in which the output of each stage becomes the input of the next. The system is built as an Electron desktop application using React and TypeScript, with all backend logic isolated from the user interface through Electron's IPC bridge. This separation is a deliberate security constraint: the renderer process has no direct access to the file system, network scanning tools or external APIs, and all communication passes through pre-approved channels registered in the main process.
+ 
+Figure \ref{fig:pipeline} illustrates the full pipeline architecture. The system proceeds through three functional groups: discovery, in which the target is validated, scanned across two progressive phases and parsed into structured JSON; analysis, in which findings are classified against the OWASP Top 10 and scored with exploitability-aware weighting; and AI enrichment, in which the Gemini API generates plain-English summaries and remediation steps whose output is then cross-validated by the hallucination guard before report generation. Each stage is implemented as an independent module with its own type definitions and barrel export, which means that any module can be replaced, extended or disabled without affecting adjacent stages. The dashed feedback path in the diagram represents the iterative scan-remediate-rescan lifecycle supported by the delta comparison system described in Section \ref{sec:lifecycle}.
+ 
+\input{pipeline-diagram} % TikZ pipeline figure
+
+
+
+\subsection{Scanning and Detection}
+
+The scanner module orchestrates Nmap as an external child process. A two-phase progressive scan design was adopted to balance the competing demands of responsiveness and coverage identified in the detection literature~\cite{chalvatzis2019}: Phase 1 scans the top 100 ports and returns early results to the user within approximately two to four minutes, while Phase 2 runs a full 65,535-port scan in the background. The results are merged with deduplication after both phases complete. The parser additionally injects post-processing detections for missing security headers and absent HTTPS, extending coverage into configuration-level findings that Nmap's scripting engine does not natively report. Figure \ref{fig:scan-target} shows the scan target interface with allowlist validation confirmed and the six-step progress stepper prior to execution.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{NewFigures/scantarget.png}
+\caption{Scan target input interface with allowlist validation. The six-step progress stepper is visible prior to scan execution.}
+\label{fig:scan-target}
+\end{figure}
+
+\subsection{Classification and Scoring}
+
+Vulnerability classification uses a dual-layer approach. A deterministic keyword matcher maps each vulnerability to OWASP Top 10 categories using weighted keyword scoring across multiple fields, with regex special-cases for common vulnerability classes and a structured fallback chain for ambiguous findings. This deterministic layer runs before the AI component sees the data, establishing a ground-truth classification that the hallucination guard can later compare against the model's independent assessment.
+ 
+The security scoring model was designed to address the limitations the literature identifies with static CVSS-based prioritisation~\cite{howland2023,jacobs2023}. Rather than treating all findings of the same severity as equally dangerous, the scorer applies four contextual multipliers that stack multiplicatively on each vulnerability's base deduction: port exposure weighting amplifies findings on commonly targeted ports, service exposure amplifies findings affecting database or administrative services, an authentication weakness multiplier increases the cost of findings suggesting credential flaws, and a flat TLS absence penalty applies once when HTTP services are detected without HTTPS. All multipliers are defined as named constants and are fully deterministic, producing identical scores from identical inputs. A runtime feature toggle allows contextual weighting to be disabled entirely for ablation testing, reverting the scorer to flat severity-only deductions. Figure \ref{fig:dashboard} presents the dashboard view of a completed scan, showing the security score, OWASP Top 10 coverage matrix and hallucination metrics alongside the prioritised vulnerability table.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{NewFigures/Purpleteam suite dashboard.png}
+\caption{PurpleTeam Suite dashboard displaying security score with exploitability-aware weighting, OWASP Top 10 coverage matrix and prioritised vulnerability table.}
+\label{fig:dashboard}
+\end{figure}
+
+\subsection{AI Integration and Hallucination Control}
+
+The LLM component sends compressed vulnerability data to Google Gemini with structured output enforcement, low temperature settings and a constrained JSON response schema. Each vulnerability receives a plain-English summary, severity justification, affected endpoints and three remediation steps. The architectural decision to compress and filter scan data before submission ensures the model can only analyse what the scanner actually found, rather than speculating about systems it has not observed, a constraint motivated by the classification reliability concerns raised by Lin et al.~\cite{lin2025} and Chen et al.~\cite{chen2024}.
+ 
+The hallucination guard operates as a post-AI validation layer. It cross-references the model's OWASP category assignments against the deterministic keyword mapper's independent classifications, verifies that any CVE identifiers mentioned in the AI output actually appear in the scan data, checks for disproportionate confidence gaps between the model and the keyword matcher, and flags vulnerabilities where remediation steps are missing. Each finding receives a per-vulnerability risk level, and an overall trust score is computed using a weighted formula that penalises fabricated CVEs most heavily, OWASP disagreements moderately, and confidence mismatches least. These metrics are persisted longitudinally to enable reliability tracking across scans. Figure \ref{fig:ai-detail} illustrates the AI-generated analysis for a single vulnerability, including the plain-English summary, affected endpoints, structured remediation steps and OWASP classification with confidence level.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{NewFigures/AI-GeneratedAnalysis.png}
+\caption{AI-generated vulnerability analysis showing plain-English summary, severity justification and structured remediation steps. The hallucination guard trust indicators are displayed alongside each finding.}
+\label{fig:ai-detail}
+\end{figure}
+
+\subsection{Lifecycle Support}
+\label{sec:lifecycle}
+
+The delta comparison module supports iterative reassessment by computing structured differences between consecutive scans of the same target. Vulnerabilities are fingerprinted using stable identity keys and classified as resolved, persisting or newly introduced. Score changes, OWASP coverage shifts and directional indicators are computed and presented in both the dashboard and an exportable comparison report. This component closes the purple team lifecycle loop identified as a gap in the literature~\cite{holm2025}, enabling a measurable scan-remediate-rescan cycle within the same tool. Figure \ref{fig:delta} presents both the in-app comparison dashboard context and the exported localhost comparison report used to evidence measured remediation impact.
+
+\begin{figure}[H]
+\centering
+\captionsetup{skip=2pt}
+\captionsetup[subfigure]{font=small, justification=centering, singlelinecheck=false, aboveskip=1pt, belowskip=0pt}
+\begin{subfigure}[t]{\textwidth}
+\centering
+\includegraphics[width=\textwidth,height=0.38\textheight,keepaspectratio]{NewFigures/comparison.png}
+\caption{In-app comparison report executive summary view (toggle-driven delta example).}
+\end{subfigure}
+
+\vspace{-0.2em}
+
+\begin{subfigure}[t]{\textwidth}
+\centering
+\includegraphics[width=\textwidth,height=0.34\textheight,keepaspectratio,trim=8 24 8 24,clip]{product/delta-comparison}
+\caption{Exported localhost comparison report excerpt showing a +8 score improvement after local target changes.}
+\end{subfigure}
+
+\caption{Delta comparison outputs in PurpleTeam Suite, showing both the application report interface and the exported report evidence used in lifecycle evaluation.}
+\label{fig:delta}
+\end{figure}
+
+\subsection{Implementation Environment}
+\label{sec:implementation}
+
+The system was developed using the technology stack summarised in Table \ref{tab:techstack}. Selection criteria prioritised cross-platform compatibility, type safety, modularity and the availability of structured output enforcement for the AI integration layer. Cross-platform support was a foundational requirement: whilst primary development and testing was conducted on Windows 11, the chosen stack ensures the application compiles and runs natively on macOS and Linux distributions without modification. This is operationally significant for a security assessment tool, as practitioners commonly operate from Linux-based environments such as Kali Linux for security tooling, whilst organisational reporting and management workflows frequently run on Windows or macOS. A single codebase serving all three platforms avoids the maintenance burden and behavioural inconsistency of platform-specific implementations. Table \ref{tab:keylibraries} further details the key dependencies and their integration points within the pipeline. All dependencies are installed through npm and pinned to specific versions in \texttt{package-lock.json} to ensure build reproducibility.
+
+% --- Both tables placed together so LaTeX floats them as a block ---
+
+\begin{table}[htbp]
+\centering
+\caption{Core technology stack and selection rationale.}
+\label{tab:techstack}
+\small
+\renewcommand{\arraystretch}{1.45}
+\setlength{\tabcolsep}{5pt}
+\begin{tabularx}{\textwidth}{
+    >{\raggedright\arraybackslash}p{2.2cm}
+    >{\raggedright\arraybackslash}p{2.8cm}
+    >{\raggedright\arraybackslash}X
+}
+\toprule
+\rowcolor{headerblue}
+\textcolor{headertext}{\textbf{Layer}} &
+\textcolor{headertext}{\textbf{Technology}} &
+\textcolor{headertext}{\textbf{Justification}} \\
+\midrule
+\rowcolor{rowlight}
+Desktop framework &
+Electron &
+Compiles to native executables for Windows, macOS and Linux from a single TypeScript codebase; provides secure IPC isolation between renderer and main processes, ensuring the UI cannot directly access the file system or spawn scanning tools \\
+
+\rowcolor{rowwhite}
+Frontend &
+React 19, TypeScript &
+Component-based UI architecture with static type checking, reducing runtime errors in security-critical data handling \\
+
+\rowcolor{rowlight}
+Styling &
+Tailwind CSS &
+Utility-first approach enabling rapid, consistent UI development without external stylesheet dependencies \\
+
+\rowcolor{rowwhite}
+Build tooling &
+Vite &
+Sub-second hot module replacement during development; native TypeScript and JSX support without additional transpilation configuration \\
+
+\rowcolor{rowlight}
+Scanning &
+Nmap (external) &
+Industry-standard network scanner validated for automated pipeline use~\cite{singh2024}; spawned as a child process to maintain separation from the application runtime \\
+
+\rowcolor{rowwhite}
+XML parsing &
+xml2js &
+Converts Nmap's XML output into traversable JavaScript objects; mature library with established handling of Nmap's output schema \\
+
+\rowcolor{rowlight}
+AI provider &
+Google Gemini 2.5 Flash &
+Structured JSON output mode, low-latency inference, configurable temperature, and sufficient context window for batch vulnerability analysis \\
+
+\rowcolor{rowwhite}
+Routing &
+React Router &
+Client-side navigation between scan, dashboard and reports views without full page reloads \\
+
+\rowcolor{rowlight}
+State management &
+Custom singleton store &
+Lightweight in-memory store avoiding external state library overhead; persists across page navigation through React hooks subscription \\
+
+\rowcolor{rowwhite}
+PDF generation &
+jsPDF (programmatic) &
+Enables server-side PDF generation within the Electron main process without browser print dependencies \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1.0}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Key library dependencies and pipeline integration points.}
+\label{tab:keylibraries}
+\small
+\renewcommand{\arraystretch}{1.45}
+\setlength{\tabcolsep}{5pt}
+\begin{tabularx}{\textwidth}{
+    >{\raggedright\arraybackslash}p{2.8cm}
+    >{\raggedright\arraybackslash}p{2.0cm}
+    >{\raggedright\arraybackslash}X
+}
+\toprule
+\rowcolor{headerblue}
+\textcolor{headertext}{\textbf{Library}} &
+\textcolor{headertext}{\textbf{Pipeline Stage}} &
+\textcolor{headertext}{\textbf{Role}} \\
+\midrule
+\rowcolor{rowlight}
+\texttt{xml2js} &
+Parse (Stage 3) &
+Parses Nmap XML into typed JSON; handles nested script output and multi-valued fields \\
+
+\rowcolor{rowwhite}
+\texttt{@google/generative-ai} &
+AI Analysis (Stage 8) &
+Official Gemini SDK; provides structured output mode, temperature control, token limits and retry configuration \\
+
+\rowcolor{rowlight}
+\texttt{jspdf} &
+Report (Stage 10) &
+Generates multi-page PDF reports programmatically with custom layouts, tables and embedded score visualisations \\
+
+\rowcolor{rowwhite}
+\texttt{electron} &
+Application shell &
+Main and renderer process management, IPC bridge, context isolation, system dialog access for file export \\
+
+\rowcolor{rowlight}
+\texttt{react-router-dom} &
+UI navigation &
+Declarative routing between scan, dashboard and reports pages \\
+
+\rowcolor{rowwhite}
+\texttt{dotenv} &
+Configuration &
+Loads Gemini API keys from \texttt{.env} file, keeping credentials outside the codebase and version control \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1.0}
+\end{table}
+
+\FloatBarrier
+
+% --- All remaining prose comes AFTER both tables ---
+
+Two architectural decisions warrant specific justification. First, the choice to spawn Nmap as an external child process rather than embedding a scanning library was driven by the need to use Nmap's full scripting engine, including the \texttt{vulners} and \texttt{http-headers} NSE scripts, which are not available through wrapper libraries. This design accepts an external dependency in exchange for access to the complete Nmap capability set. Second, the decision to use a single LLM provider (Gemini) with a model fallback chain rather than a multi-provider abstraction layer was a deliberate scope constraint. A 4-model fallback chain (\texttt{gemini-2.5-flash} as primary, with three progressively smaller alternatives) provides resilience against individual model unavailability without introducing the complexity of cross-provider prompt normalisation. The trade-off is vendor dependency, which is acknowledged as a limitation in Section 3.4.
+
+The development and testing environment consisted of a Windows 11 workstation with Nmap installed on the system PATH. The controlled localhost testbed was served through Node.js on port 8080. All scanning was conducted over the local network or against public authorised targets, with no traffic routed through external proxies or VPNs. Build verification was additionally performed on Kali Linux to confirm that the Electron packaging, Nmap child process spawning and file system persistence behaved consistently across platforms.
+
+\clearpage
+\section{Evaluation Framework}
+\label{sec:evaluation-framework}
+
+The evaluation is structured across five phases, each producing quantitative data
+against defined metrics. All testing is conducted on five authorised targets
+that collectively represent a range of technology stacks, deployment models and
+vulnerability profiles. Two targets are locally hosted: a controlled Node.js
+testbed served on \texttt{127.0.0.1:8080} with 12 intentional vulnerabilities
+across six OWASP categories, and an OWASP Mutillidae~II Docker instance running
+at Security Level~0 with Apache, PHPMyAdmin, OpenLDAP and HTTPS services
+exposed across ports 80, 81, 82, 389 and 443. Three targets are public:
+\texttt{scanme.nmap.org} (Nmap Project, explicitly authorised for port scanning),
+\texttt{testasp.vulnweb.com} (Acunetix IIS/ASP/MSSQL test site) and
+\texttt{demo.testfire.net} (HCL/IBM deliberately vulnerable banking application).
+The two locally hosted environments are fully controllable, permitting deliberate
+vulnerability configuration and remediation between scan cycles. The three public
+targets provide externally maintained intentionally vulnerable environments
+against which pipeline behaviour can be verified without modification.
+
+Phase~1 establishes baseline measurements by running the full pipeline against
+all five targets with contextual weighting disabled, and repeating each scan to
+verify result consistency. Phase~2 enables contextual weighting and repeats the
+scans, producing a direct comparison of scores with and without
+exploitability-aware adjustment. Phase~3 performs ablation testing, in which
+individual pipeline features are disabled one at a time and the same scan data
+is reprocessed to isolate the contribution of each component. The features
+tested in isolation are the OWASP keyword mapper, the AI analysis component,
+the hallucination guard and the contextual weighting layer. A runtime feature
+toggle system was implemented to support this methodology, allowing each feature
+to be switched off without modifying the codebase or re-scanning.
+
+Phase~4 demonstrates the iterative lifecycle capability. A subset of the
+localhost testbed's vulnerabilities are remediated, the target is rescanned,
+and a delta comparison report is generated to measure score improvement,
+vulnerability resolution and OWASP coverage contraction. The localhost testbed
+is used for this phase because its vulnerability configuration is under direct
+control, permitting precise remediation and reassessment within a single
+session. Phase~5 evaluates hallucination guard reliability by accumulating
+trust score, OWASP disagreement rate, confidence mismatch rate and fabricated
+CVE count across multiple scans of different targets, producing a longitudinal
+dataset for assessing AI output stability.
+
+The evaluation metrics are drawn directly from the proposal's objectives and
+the constraints the literature review establishes: classification correctness
+measured against known ground-truth vulnerabilities in the controlled testbeds,
+remediation quality assessed through the presence and relevance of structured
+guidance, OWASP category coverage breadth, and hallucination detection
+performance quantified through the trust scoring mechanism. The five phases are summarised in Table~\ref{tab:eval-framework}.
+
+\input{evaluation-diagram}
+\FloatBarrier
+
+\section{Limitations and Ethical Considerations}
+\label{sec:limitations-ethics}
+
+The system carries several acknowledged limitations. The scanner is restricted
+to Nmap, which provides strong network-layer coverage but cannot perform
+authenticated application-layer testing of the kind that tools such as OWASP
+ZAP or Burp Suite support~\cite{althunayyan2022}. The target set is small,
+comprising five authorised environments, which limits the generalisability of
+evaluation findings. The AI component depends on a single LLM provider, and
+model behaviour may differ across versions or alternative providers. The
+contextual weighting multipliers were calibrated based on common exposure
+patterns rather than empirical attack frequency data, and should be treated as
+operationally reasonable defaults rather than statistically validated risk
+weights.
+
+The system performs active network scanning, which is regulated under the
+Computer Misuse Act 1990. Accordingly, all scanning was restricted to
+authorised targets through an enforced allowlist validation mechanism that
+prevents scan execution against unapproved hosts. All testing was restricted to
+the five authorised targets described in Section~\ref{sec:evaluation-framework}.
+No live production systems were tested and no human participants or personal
+data were involved. Ethical approval was granted by the project supervisor on
+11~February 2026.
+
+Only compressed vulnerability metadata is transmitted to the Gemini API. Raw
+scan outputs, network topology data and sensitive system information are not
+uploaded, limiting external data exposure to the minimum necessary for AI
+analysis. The hallucination guard further ensures that AI-generated claims are
+not presented to the user without deterministic cross-validation, reducing the
+risk of acting on fabricated security advice. The application displays a legal
+disclaimer regarding the implications of misuse, and responsible operation
+requires explicit authorisation from the target owner.
+
+\clearpage
+\section{Summary}
+This chapter has established the methodological foundation for the evaluation that follows. The system was designed against seven traceable requirements derived from the proposal objectives, each mapped to a specific pipeline module and a defined evaluation phase. The pipeline architecture separates discovery, deterministic analysis and AI enrichment into independently testable modules, with a runtime feature toggle system enabling controlled ablation of individual components without modifying the codebase. The evaluation framework comprises five phases covering baseline consistency, exploitability-aware scoring impact, per-feature contribution isolation, iterative lifecycle demonstration and longitudinal hallucination reliability. All testing is restricted to authorised targets under the ethical constraints described in Section 3.4, and the evaluation metrics are drawn directly from the literature-established constraints reviewed in Chapter 2. The system is feature-complete, and the results of executing this evaluation framework are presented in Chapter 4.
+
+\FloatBarrier
+ 
+% ============================================================
+% Chapter 4 — Analysis and Results
+% ============================================================
+\addtocontents{toc}{\protect\newpage}
+\chapter{Analysis and Results}
+
+% ─────────────────────────────────────────────
+\section{Evaluation Design Overview}
+\label{sec:evaluation-overview}
+
+The evaluation was conducted according to the five-phase framework defined in
+Section~\ref{sec:evaluation-framework}, applied across five authorised targets
+that collectively represent a range of technology stacks, deployment models and
+vulnerability profiles. Table~\ref{tab:eval-targets} summarises these targets and
+their respective roles within the evaluation. Each phase produces quantitative
+output against defined metrics, progressing from baseline measurement through
+contextual weighting impact, per-component ablation analysis, lifecycle delta
+demonstration, and longitudinal hallucination reliability assessment. Phases~1,
+2 and~5 were executed across all five targets, Phase~3 (ablation) was conducted
+on Mutillidae and the controlled testbed, and Phase~4 (lifecycle delta) was
+conducted on the controlled testbed only, which is the sole target whose
+vulnerability configuration is under direct researcher control. The sections that
+follow present the results of each phase in turn, followed by a cross-phase
+discussion and a comparative capability summary against existing tools.
+
+\begin{table}[H]
+\centering
+\caption{Evaluation targets and their roles within the five-phase framework.}
+\label{tab:eval-targets}
+\footnotesize
+\renewcommand{\arraystretch}{1.45}
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{
+  >{\raggedright\arraybackslash}p{3.8cm}
+  >{\raggedright\arraybackslash}p{3.6cm}
+  >{\raggedright\arraybackslash}X}
+\toprule
+\rowcolor{headerblue}
+\textcolor{headertext}{\textbf{Label}} &
+\textcolor{headertext}{\textbf{Address}} &
+\textcolor{headertext}{\textbf{Type and Role}} \\
+\midrule
+\rowcolor{rowlight}
+Mutillidae &
+\texttt{localhost} (port~80) &
+Local, OWASP Docker. Mutillidae~II running at Security Level~0, exposing
+Apache, PHPMyAdmin, OpenLDAP and HTTPS across ports 80, 81, 82, 389 and 443.
+Used for Phases~1, 2, 3 and~5. \\
+\rowcolor{rowwhite}
+Controlled Testbed &
+\texttt{127.0.0.1:8080} &
+Local, custom Node.js. Purpose-built application with 12 intentional
+vulnerabilities across six OWASP categories. Sole target with
+researcher-controlled vulnerability state. Used for Phases~1, 3 and~4. \\
+\rowcolor{rowlight}
+scanme.nmap.org &
+\texttt{scanme.nmap.org} &
+Public, Nmap Project. Explicitly authorised for port scanning, minimal service
+exposure provides a clean external reference. Used for Phases~1 and~5. \\
+\rowcolor{rowwhite}
+testasp.vulnweb.com &
+\texttt{testasp.vulnweb.com} &
+Public, Acunetix test site (IIS/ASP/MSSQL). Technology profile distinct from
+the local PHP targets. Used for Phases~1 and~5. \\
+\rowcolor{rowlight}
+demo.testfire.net &
+\texttt{demo.testfire.net} &
+Public, HCL/IBM banking app (IIS/ASP.NET). Deliberately vulnerable
+financial-services attack surface. Used for Phases~1 and~5. \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1.0}
+\end{table}
+
+All scans were conducted on a Windows~11 workstation with Nmap~7.98 installed on the
+system PATH. The feature toggle configuration for each scan is recorded in the saved
+JSON output via the \texttt{featureToggles} snapshot mechanism described in
+Section~\ref{sec:system-design}, ensuring that every result can be traced to its
+corresponding pipeline configuration. Phases~2 and~3 were conducted on the Mutillidae
+target, which produced 26 vulnerabilities across four OWASP categories in the baseline
+scan and therefore offered the largest dataset for measuring per-component contribution.
+
+% ─────────────────────────────────────────────
+\section{Phase 1: Baseline Consistency and Reproducibility}
+\label{sec:phase1-results}
+
+The severity deduction scores across the five targets range from 50 to 181, with
+four of the five targets receiving an F grade and only testasp.vulnweb.com achieving
+a D at 50 deduction points, as shown in Table~\ref{tab:baseline-results} and
+Figure~\ref{fig:baseline-scores}. Mutillidae produced the highest total vulnerability
+count at 26 findings across all severity tiers, which is consistent with its design
+as a deliberately extensive multi-service attack surface exposing Apache, PHPMyAdmin,
+OpenLDAP and HTTPS endpoints simultaneously. The demo.testfire.net target produced
+the second-largest dataset at 18 vulnerabilities including 3 Critical findings, which
+is the highest Critical count in the evaluation and reflects the breadth of its
+deliberately vulnerable banking application surface. The controlled testbed and
+scanme.nmap.org returned 15 and 6 vulnerabilities respectively, while
+testasp.vulnweb.com produced the smallest dataset at 5 findings with zero
+Informational entries, which suggests that its IIS/ASP/MSSQL stack exposes fewer
+network-layer indicators than the Apache/PHP configurations used by the local targets.
+
+The OWASP distribution presented in Table~\ref{tab:baseline-owasp} and
+Figure~\ref{fig:owasp-heatmap} confirms that four of the five targets achieved
+4/10 category coverage, with detections concentrated in A01 (Broken Access Control),
+A02 (Cryptographic Failures), A03 (Injection) and A05 (Security Misconfiguration).
+The exception is demo.testfire.net, which achieved 5/10 coverage by additionally
+triggering A07 (Identification and Authentication Failures) detections, a category
+that the other four targets did not activate. This additional coverage is consistent
+with the target's financial-application design, which exposes authentication
+endpoints that Nmap's NSE scripts can partially enumerate. The A05 category dominates
+across all targets, with Mutillidae recording 12 A05 findings alone, which is a
+pattern that reflects the network-layer scanner's strength in detecting service
+misconfigurations and exposed administrative interfaces.
+
+% Baseline results table — one row per target
+\begin{table}[H]
+\centering
+\caption{Phase~1 baseline scan results across all five evaluation targets (all feature toggles enabled).}
+\label{tab:baseline-results}
+\footnotesize
+\renewcommand{\arraystretch}{1.45}
+\setlength{\tabcolsep}{5pt}
+\begin{tabularx}{\textwidth}{@{}
+  >{\raggedright\arraybackslash}p{3.8cm}
+  >{\centering\arraybackslash}p{1.1cm}
+  >{\centering\arraybackslash}p{1.0cm}
+  >{\centering\arraybackslash}p{0.8cm}
+  >{\centering\arraybackslash}p{0.8cm}
+  >{\centering\arraybackslash}p{0.8cm}
+  >{\centering\arraybackslash}p{0.8cm}
+  >{\centering\arraybackslash}p{0.8cm}
+  >{\centering\arraybackslash}X @{}}
+\toprule
+\rowcolor{headerblue}
+\textcolor{headertext}{\textbf{Target}} &
+\textcolor{headertext}{\textbf{Sev.\ Ded.}} &
+\textcolor{headertext}{\textbf{Grade}} &
+\textcolor{headertext}{\textbf{Crit.}} &
+\textcolor{headertext}{\textbf{High}} &
+\textcolor{headertext}{\textbf{Med.}} &
+\textcolor{headertext}{\textbf{Low}} &
+\textcolor{headertext}{\textbf{Info}} &
+\textcolor{headertext}{\textbf{Total}} \\
+\midrule
+\rowcolor{rowlight}
+Mutillidae              & 181 & F & 2 & 5 & 4 & 3 & 12 & 26 \\
+\rowcolor{rowwhite}
+Controlled Testbed      & 77  & F & 2 & 3 & 2 & 0 & 8  & 15 \\
+\rowcolor{rowlight}
+scanme.nmap.org         & 91  & F & 2 & 1 & 1 & 1 & 1  & 6  \\
+\rowcolor{rowwhite}
+demo.testfire.net       & 96  & F & 3 & 4 & 3 & 0 & 8  & 18 \\
+\rowcolor{rowlight}
+testasp.vulnweb.com     & 50  & D & 2 & 1 & 1 & 1 & 0  & 5  \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1.0}
+\end{table}
+
+% OWASP distribution table — one row per target
+\begin{table}[H]
+\centering
+\caption{OWASP Top~10 category distribution across baseline scans.}
+\label{tab:baseline-owasp}
+\footnotesize
+\renewcommand{\arraystretch}{1.45}
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{@{}
+  >{\raggedright\arraybackslash}p{3.2cm}
+  >{\centering\arraybackslash}p{0.7cm}
+  >{\centering\arraybackslash}p{0.7cm}
+  >{\centering\arraybackslash}p{0.7cm}
+  >{\centering\arraybackslash}p{0.7cm}
+  >{\centering\arraybackslash}p{0.7cm}
+  >{\centering\arraybackslash}p{0.7cm}
+  >{\centering\arraybackslash}p{0.7cm}
+  >{\centering\arraybackslash}p{0.7cm}
+  >{\centering\arraybackslash}p{0.7cm}
+  >{\centering\arraybackslash}p{0.7cm}
+  >{\centering\arraybackslash}X @{}}
+\toprule
+\rowcolor{headerblue}
+\textcolor{headertext}{\textbf{Target}} &
+\textcolor{headertext}{\textbf{A01}} &
+\textcolor{headertext}{\textbf{A02}} &
+\textcolor{headertext}{\textbf{A03}} &
+\textcolor{headertext}{\textbf{A04}} &
+\textcolor{headertext}{\textbf{A05}} &
+\textcolor{headertext}{\textbf{A06}} &
+\textcolor{headertext}{\textbf{A07}} &
+\textcolor{headertext}{\textbf{A08}} &
+\textcolor{headertext}{\textbf{A09}} &
+\textcolor{headertext}{\textbf{A10}} &
+\textcolor{headertext}{\textbf{Cov.}} \\
+\midrule
+\rowcolor{rowlight}
+Mutillidae              & 2 & 5 & 7 & 0 & 12 & 0 & 0 & 0 & 0 & 0 & 4/10 \\
+\rowcolor{rowwhite}
+Controlled Testbed      & 2 & 5 & 0 & 0 & 6  & 0 & 2 & 0 & 0 & 0 & 4/10 \\
+\rowcolor{rowlight}
+scanme.nmap.org         & 1 & 3 & 1 & 0 & 1  & 0 & 0 & 0 & 0 & 0 & 4/10 \\
+\rowcolor{rowwhite}
+demo.testfire.net       & 3 & 2 & 6 & 0 & 4  & 0 & 3 & 0 & 0 & 0 & 5/10 \\
+\rowcolor{rowlight}
+testasp.vulnweb.com     & 1 & 2 & 0 & 0 & 1  & 0 & 1 & 0 & 0 & 0 & 4/10 \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1.0}
+\end{table}
+
+Taken together, the baseline results confirm that the pipeline produces consistent,
+deterministic output across a heterogeneous target set, with severity deductions
+scaling in proportion to the number and criticality of detected vulnerabilities.
+The variation in total findings between targets, ranging from 5 on
+testasp.vulnweb.com to 26 on Mutillidae, validates the decision to use Mutillidae
+as the primary target for ablation and contextual weighting analysis in subsequent
+phases, since its larger dataset provides greater statistical resolution for
+measuring per-component contribution as described in
+Section~\ref{sec:evaluation-framework}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{chapter4figures/fig_baseline_scores.png}
+\caption{Severity deduction scores across all five baseline scans, illustrating the
+  range from 50 (\mbox{testasp.vulnweb.com}) to 181 (Mutillidae).}
+\label{fig:baseline-scores}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{chapter4figures/fig_baseline_severity.png}
+\caption{Severity distribution by target, showing the breakdown of Critical, High,
+  Medium, Low and Informational findings across all five baseline scans.}
+\label{fig:baseline-severity}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{chapter4figures/fig_owasp_heatmap.png}
+\caption{OWASP Top~10 category heatmap across all five baseline scans, with cell
+  values indicating the number of vulnerabilities mapped to each category.}
+\label{fig:owasp-heatmap}
+\end{figure}
+
+% ─────────────────────────────────────────────
+\section{Phase 2: Contextual Weighting Comparative Analysis}
+\label{sec:phase2-results}
+
+% Contextual weighting comparison table — Mutillidae only
+\begin{table}[H]
+\centering
+\caption{Phase~2 contextual weighting comparison on the Mutillidae target.}
+\label{tab:contextual-comparison}
+\small
+\renewcommand{\arraystretch}{1.45}
+\setlength{\tabcolsep}{5pt}
+\begin{tabularx}{\textwidth}{
+  >{\raggedright\arraybackslash}p{4.5cm}
+  >{\centering\arraybackslash}p{1.8cm}
+  >{\centering\arraybackslash}p{1.8cm}
+  >{\centering\arraybackslash}X}
+\toprule
+\rowcolor{headerblue}
+\textcolor{headertext}{\textbf{Configuration}} &
+\textcolor{headertext}{\textbf{Total Deductions}} &
+\textcolor{headertext}{\textbf{Grade}} &
+\textcolor{headertext}{\textbf{Notes}} \\
+\midrule
+\rowcolor{rowlight}
+\texttt{contextualWeighting} OFF (flat) & 107 & F & Flat severity scoring only \\
+\rowcolor{rowwhite}
+All toggles ON (contextual)             & 181 & F & Contextual multipliers active \\
+\midrule
+\rowcolor{rowlight}
+\textbf{Amplification} & \multicolumn{3}{l}{$(181 - 107) \div 107 = +69.2\%$} \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1.0}
+\end{table}
+
+The contextual weighting system produced a 69.2\% amplification in total severity
+deductions when applied to the Mutillidae baseline, raising the total from 107
+points under flat scoring to 181 points with contextual multipliers active, as
+shown in Table~\ref{tab:contextual-comparison} and
+Figure~\ref{fig:contextual-comparison}. This amplification demonstrates that
+port exposure on web-facing services is the dominant contextual factor within the
+current multiplier model, since Mutillidae exposes multiple HTTP and HTTPS
+endpoints on standard web ports that the \texttt{contextualWeighting} module
+identifies as high-exposure services warranting a 1.5$\times$ multiplier. The
+multiplier heatmap in Figure~\ref{fig:multiplier-heatmap} confirms this pattern,
+showing that port exposure registers at 1.5$\times$ for web-facing ports
+(principally port~80), while the service exposure and authentication weakness
+channels both remain at 1.0$\times$ throughout the entire vulnerability set,
+which means that these two multiplier dimensions had no measurable effect on the
+Mutillidae target.
+
+The observation that only one of the three multiplier channels activated on this
+target is a constraint that limits the conclusions that can be drawn about the
+full contextual weighting model from this dataset alone. The service exposure and
+authentication weakness multipliers are designed to respond to conditions such as
+default credentials, unpatched service versions and weak authentication
+configurations, none of which triggered on the Mutillidae deployment at Security
+Level~0. This finding suggests that the multiplier system would benefit from a
+broader range of service types and authentication configurations in future
+testing, a point that is revisited in the limitations discussion in
+Section~\ref{sec:eval-limitations}.
+
+The combined multiplier of 1.5$\times$ applied to approximately 60\% of the
+vulnerability set accounts for the bulk of the 74-point differential between
+flat and contextual scoring, confirming that the weighting system meaningfully
+differentiates risk profiles beyond flat CVSS-style severity assignment. The
+multiplier constants themselves are researcher-defined heuristics rather than
+empirically calibrated values, as acknowledged in Section~\ref{sec:system-design},
+which is a design decision that prioritises transparency and adjustability over
+statistical precision.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{chapter4figures/fig_contextual_comparison.png}
+\caption{Comparison of flat (weighting OFF) versus contextual (weighting ON) severity
+  deductions on the Mutillidae target, showing the 69.2\% amplification produced by
+  the contextual multiplier system.}
+\label{fig:contextual-comparison}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.1\textwidth]{chapter4figures/fig_multiplier_heatmap only.png}
+\caption{Per-vulnerability contextual multiplier values for the Mutillidae baseline scan,
+  showing port exposure, service exposure, authentication weakness and combined
+  multiplier across all 26 findings.}
+\label{fig:multiplier-heatmap}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[height=0.82\textheight,keepaspectratio]{chapter4figures/fig_multiplier_heatmap - Copy (2).png}
+\caption{Adjusted deduction scores for each vulnerability in the Mutillidae
+  baseline scan, corresponding to the multiplier values in Figure~\ref{fig:multiplier-heatmap}.}
+\label{fig:adj-deduction}
+\end{figure}
+
+% ─────────────────────────────────────────────
+\section{Phase 3: Ablation Testing}
+\label{sec:phase3-results}
+
+% Ablation results table — Mutillidae target, one toggle off per row
+\begin{table}[H]
+\centering
+\caption{Phase~3 ablation test results on the Mutillidae target. Each row disables a single pipeline component while all others remain active.}
+\label{tab:ablation-results}
+\small
+\renewcommand{\arraystretch}{1.45}
+\setlength{\tabcolsep}{5pt}
+\begin{tabularx}{\textwidth}{
+  >{\raggedright\arraybackslash}p{4.0cm}
+  >{\centering\arraybackslash}p{1.5cm}
+  >{\centering\arraybackslash}p{1.5cm}
+  >{\raggedright\arraybackslash}X}
+\toprule
+\rowcolor{headerblue}
+\textcolor{headertext}{\textbf{Configuration}} &
+\textcolor{headertext}{\textbf{Sev. Ded.}} &
+\textcolor{headertext}{\textbf{$\Delta$ vs Full}} &
+\textcolor{headertext}{\textbf{Observed Effect}} \\
+\midrule
+\rowcolor{rowlight}
+Full pipeline (baseline)              & 181 & ---   & All components active \\
+\rowcolor{rowwhite}
+\texttt{contextualWeighting} OFF      & 107 & $-74$ & Port exposure multipliers removed \\
+\rowcolor{rowlight}
+\texttt{owaspMapping} OFF             & 166 & $-15$ & All vulns collapse to A05 fallback \\
+\rowcolor{rowwhite}
+\texttt{aiAnalysis} OFF               & 181 & $0$   & Remediation quality removed, score unchanged \\
+\rowcolor{rowlight}
+\texttt{hallucinationGuard} OFF       & 165 & $-16$ & Validation layer removed \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1.0}
+\end{table}
+
+Disabling \texttt{contextualWeighting} produced the largest single-component
+delta at $-74$ points, reducing total severity deductions from 181 to 107, which
+confirms contextual weighting as the highest-impact component in the scoring
+pipeline. This result is consistent with the Phase~2 finding that port exposure
+multipliers amplify deductions by 69.2\%, and it demonstrates that the contextual
+layer accounts for approximately 41\% of the total severity deduction in the full
+pipeline configuration. The magnitude of this delta validates the design decision
+to implement exploitability-aware weighting as a distinct, toggleable module rather
+than embedding it within the base severity calculation, since operators who prefer
+flat scoring can disable the multiplier system without affecting the remainder of
+the pipeline, as described in Section~\ref{sec:system-design}.
+
+Disabling \texttt{owaspMapping} reduced total deductions by 15 points, from 181
+to 166, because all vulnerabilities collapsed to the A05 (Security
+Misconfiguration) fallback category when the deterministic mapper was removed.
+This collapse eliminates the category breadth penalty that the scoring engine
+applies when vulnerabilities span multiple OWASP categories, which is a penalty
+designed to reflect the increased organisational risk of a diverse vulnerability
+profile. The relatively modest 15-point reduction confirms that the breadth
+penalty contributes a secondary but measurable effect to the overall score, and
+it also demonstrates that the fallback mechanism operates as designed by assigning
+a conservative default rather than discarding unmapped findings entirely.
+
+Disabling \texttt{aiAnalysis} produced a zero-point delta, which is the expected
+result given that the AI component contributes remediation depth and explanatory
+quality rather than numerical scoring. The AI module's primary output is the
+remediation guidance text and the $+10$ remediation bonus, but this bonus affects
+grade interpretation rather than the severity deduction total that the ablation
+test measures. Disabling \texttt{hallucinationGuard} reduced deductions by 16
+points, from 181 to 165, which indicates that the guard's validation adjustments
+contribute a comparable effect to the OWASP mapping breadth penalty. This
+16-point contribution reflects the guard's role as a validation layer that applies
+confidence-weighted adjustments to AI classifications rather than functioning as
+a primary scoring mechanism, which is consistent with the architectural design
+described in Section~\ref{sec:system-design}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{chapter4figures/fig_ablation_scores.png}
+\caption{Ablation test severity deductions on the Mutillidae target, comparing the
+  full pipeline against each single-component removal configuration.}
+\label{fig:ablation-scores}
+\end{figure}
+
+% ─────────────────────────────────────────────
+\section{Phase 4: Lifecycle Delta Demonstration}
+\label{sec:phase4-results}
+
+Phase~4 was conducted exclusively on the controlled testbed
+(\texttt{127.0.0.1:8080}), which is the only target whose vulnerability
+configuration permits selective remediation between scan cycles. The baseline
+scan was followed by targeted remediation of eight vulnerabilities, after which
+a rescan was performed and the delta comparison module generated the results
+presented in Table~\ref{tab:delta-comparison}.
+
+\begin{table}[H]
+\centering
+\caption{Phase~4 lifecycle delta comparison on the controlled testbed, showing
+  before (baseline) and after (remediated) scan results.}
+\label{tab:delta-comparison}
+\small
+\renewcommand{\arraystretch}{1.45}
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{
+  >{\raggedright\arraybackslash}X
+  >{\centering\arraybackslash}p{1.35cm}
+  >{\centering\arraybackslash}p{1.55cm}
+  >{\centering\arraybackslash}p{1.45cm}
+  >{\centering\arraybackslash}p{1.00cm}
+  >{\centering\arraybackslash}p{1.00cm}
+  >{\centering\arraybackslash}p{0.80cm}}
+\toprule
+\rowcolor{headerblue}
+\textcolor{headertext}{\textbf{Scan}} &
+\textcolor{headertext}{\textbf{Score}} &
+\textcolor{headertext}{\textbf{Total Vulns}} &
+\textcolor{headertext}{\textbf{Critical}} &
+\textcolor{headertext}{\textbf{High}} &
+\textcolor{headertext}{\textbf{Med.}} &
+\textcolor{headertext}{\textbf{Low}} \\
+\midrule
+\rowcolor{rowlight}
+Before (Baseline)   & 3  & 15 & 0 & 2 & 3 & 2 \\
+\rowcolor{rowwhite}
+After (Remediated)  & 60 & 7  & 0 & 1 & 1 & 1 \\
+\midrule
+\rowcolor{rowlight}
+\textbf{Delta}      & \textbf{+57} & \textbf{$-8$} & \textbf{0} & \textbf{$-1$} & \textbf{$-2$} & \textbf{$-1$} \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1.0}
+\end{table}
+
+The score improved by 57 points, from 3 to 60, following the remediation of 8
+out of 15 vulnerabilities, which represents a 53\% reduction in total findings
+as shown in Figure~\ref{fig:delta-comparison}. The remediated vulnerabilities
+included 1 High, 2 Medium and 1 Low severity finding alongside 4 Informational
+entries, and the post-remediation scan correctly identified the 7 remaining
+findings as persisting vulnerabilities that were not targeted for remediation in
+this cycle. This result confirms that the delta comparison module accurately
+distinguishes between resolved and persisting findings across consecutive scan
+cycles, which is the core requirement of the lifecycle tracking capability
+described in Section~\ref{sec:system-design}.
+
+The 57-point score improvement also validates the scoring engine's sensitivity
+to remediation activity, since the removal of higher-severity findings produced
+a proportionally larger score recovery than the removal of Informational entries
+alone would have achieved. The fact that the post-remediation score reached 60
+rather than a substantially higher value reflects the continued presence of 1
+High and 1 Medium finding in the residual vulnerability set, which is a
+constraint that demonstrates the scoring engine penalising persisting
+high-severity findings as designed. Taken together, these results confirm that
+the scan-remediate-rescan lifecycle operates as intended, producing traceable
+delta outputs that an operator could use to measure remediation progress across
+iterative assessment cycles.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{chapter4figures/fig_delta_comparison.png}
+\caption{Lifecycle delta comparison between the baseline and remediated scans on
+  the controlled testbed, showing the score improvement from 3 to 60 and the
+  reduction from 15 to 7 total vulnerabilities.}
+\label{fig:delta-comparison}
+\end{figure}
+
+% ─────────────────────────────────────────────
+\section{Phase 5: Longitudinal Hallucination Reliability}
+\label{sec:phase5-results}
+
+% Hallucination metrics table — one row per scan across all targets
+\begin{table}[H]
+\centering
+\caption{Longitudinal hallucination guard metrics across all evaluation scans
+  where both \texttt{aiAnalysis} and \texttt{hallucinationGuard} were enabled.}
+\label{tab:hallucination-longitudinal}
+\footnotesize
+\renewcommand{\arraystretch}{1.45}
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{
+  >{\centering\arraybackslash}p{0.6cm}
+  >{\raggedright\arraybackslash}p{4.6cm}
+  >{\centering\arraybackslash}p{1.4cm}
+  >{\centering\arraybackslash}p{1.3cm}
+  >{\raggedright\arraybackslash}X}
+\toprule
+\rowcolor{headerblue}
+\textcolor{headertext}{\textbf{Scan}} &
+\textcolor{headertext}{\textbf{Target / Configuration}} &
+\textcolor{headertext}{\textbf{Trust Score}} &
+\textcolor{headertext}{\textbf{Fab.\ CVEs}} &
+\textcolor{headertext}{\textbf{Notes}} \\
+\midrule
+\rowcolor{rowlight}
+1  & Mutillidae (baseline)                    & $\sim$55 & 0 & Below threshold \\
+\rowcolor{rowwhite}
+2  & Mutillidae (No OWASP)                    & 0        & 0 & Guard detects total OWASP disagreement \\
+\rowcolor{rowlight}
+3  & Controlled Testbed (baseline)            & $\sim$50 & 0 & Below threshold \\
+\rowcolor{rowwhite}
+4  & Controlled Testbed (Phase~2)             & $\sim$47 & 0 & Below threshold \\
+\rowcolor{rowlight}
+5  & Controlled Testbed (No OWASP)            & $\sim$40 & 0 & Below threshold \\
+\rowcolor{rowwhite}
+6  & scanme.nmap.org (baseline)               & $\sim$72 & 0 & Above threshold \\
+\rowcolor{rowlight}
+7  & scanme.nmap.org (Phase~2)                & $\sim$71 & 0 & Above threshold \\
+\rowcolor{rowwhite}
+8  & testasp.vulnweb.com (baseline)           & $\sim$85 & 0 & Above threshold \\
+\rowcolor{rowlight}
+9  & testasp.vulnweb.com (Phase~2)            & $\sim$85 & 0 & Above threshold \\
+\rowcolor{rowwhite}
+10 & demo.testfire.net (baseline)             & $\sim$38 & 0 & Below threshold \\
+\rowcolor{rowlight}
+11 & demo.testfire.net (Phase~2)              & $\sim$38 & 0 & Below threshold \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1.0}
+\end{table}
+
+The fabricated CVE count remained at zero across all 11 scans presented in
+Table~\ref{tab:hallucination-longitudinal}, which is a strong positive signal
+indicating that the AI model did not invent non-existent vulnerability identifiers
+in any configuration tested. Trust scores, by contrast, varied considerably across
+targets, ranging from 0 on the Mutillidae ``No OWASP'' configuration to
+approximately 85 on testasp.vulnweb.com, as visualised in
+Figure~\ref{fig:trust-scores}. Only scanme.nmap.org and testasp.vulnweb.com
+consistently exceeded the 70-point trust threshold, while the remaining three
+targets produced scores between 0 and 55 across all tested configurations.
+Figure~\ref{fig:hallucination-breakdown} provides a complementary view of the
+risk flag distribution, showing that Mutillidae baseline accumulated the highest
+total at approximately 18 flags, while public targets with fewer vulnerabilities
+generated approximately 5 to 6 flags each, which is consistent with the expectation
+that larger vulnerability sets produce more opportunities for AI classification
+disagreements.
+
+The Mutillidae ``No OWASP'' scan dropping to a trust score of 0 is expected
+behaviour that confirms the hallucination guard functions as designed. When the
+deterministic OWASP mapper is disabled, all vulnerabilities fall back to A05
+(Security Misconfiguration), and the guard detects near-total disagreement between
+the AI's OWASP classifications and the deterministic assignments, which correctly
+drives the trust score to zero. This result demonstrates that the guard is not
+simply rubber-stamping AI outputs but is actively comparing AI classifications
+against the deterministic reference and penalising configurations where the two
+diverge significantly.
+
+The consistently low trust scores on demo.testfire.net (approximately 38 across
+both baseline and Phase~2 scans) suggest that the AI model struggled with the
+IIS/ASP.NET technology stack that this target presents. The Gemini model used for
+AI analysis may have less training exposure to Microsoft web server configurations
+compared to the Apache/PHP targets that dominate the local evaluation environment,
+which is a constraint that produces higher disagreement rates between AI and
+deterministic classification on this target. This pattern, read together with the
+high trust scores on the simpler scanme.nmap.org and testasp.vulnweb.com targets,
+indicates that trust score variation is at least partially a function of target
+complexity and technology stack familiarity rather than a systematic deficiency in
+the hallucination guard itself.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{%
+  \includegraphics[width=1.15\textwidth]{chapter4figures/fig_trust_scores.png}%
+}
+\caption{Trust scores across all evaluation scans, with the 70-point threshold
+  indicated. Only \mbox{scanme.nmap.org} and \mbox{testasp.vulnweb.com}
+  consistently exceed the threshold.}
+\label{fig:trust-scores}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{chapter4figures/fig_hallucination_breakdown.png}
+\caption{Hallucination risk flag breakdown per scan, showing stacked Low, Medium
+  and High risk flags. Mutillidae baseline exhibits the highest total flag count
+  at approximately 18 flags.}
+\label{fig:hallucination-breakdown}
+\end{figure}
+
+% ─────────────────────────────────────────────
+\section{Tool Capability Comparison}
+\label{sec:tool-comparison}
+
+Table~\ref{tab:tool-comparison} positions PurpleTeam Suite against six
+representative tools drawn from the augmented literature matrix
+(Section~\ref{sec:lit-review}): four established scanning and testing tools
+(Nmap, OWASP ZAP, OpenVAS, Burp Suite), the commercial scanner Nessus, and
+Splunk SOAR as a representative AI-assisted security orchestration platform.
+The comparison measures integration completeness across the full assessment
+lifecycle rather than raw detection performance, which is outside the scope of
+a single-scanner pipeline that depends on Nmap for its detection layer.
+
+\begin{table}[H]
+\centering
+\caption{Feature comparison across representative vulnerability assessment tools. Integration completeness is assessed rather than raw detection performance.}
+\label{tab:tool-comparison}
+\footnotesize
+\renewcommand{\arraystretch}{1.45}
+\setlength{\tabcolsep}{2pt}
+\begin{tabularx}{\textwidth}{
+  >{\raggedright\arraybackslash}X
+  >{\centering\arraybackslash}p{1.10cm}
+  >{\centering\arraybackslash}p{1.10cm}
+  >{\centering\arraybackslash}p{1.10cm}
+  >{\centering\arraybackslash}p{1.10cm}
+  >{\centering\arraybackslash}p{1.10cm}
+  >{\centering\arraybackslash}p{1.10cm}
+  >{\centering\arraybackslash}p{1.10cm}}
+\toprule
+\rowcolor{headerblue}
+\textcolor{headertext}{\textbf{Capability}} &
+\makecell{\rotatebox{90}{\textcolor{headertext}{\textbf{PurpleTeam}}}} &
+\makecell{\rotatebox{90}{\textcolor{headertext}{\textbf{Nmap}}}} &
+\makecell{\rotatebox{90}{\textcolor{headertext}{\textbf{OWASP ZAP}}}} &
+\makecell{\rotatebox{90}{\textcolor{headertext}{\textbf{OpenVAS}}}} &
+\makecell{\rotatebox{90}{\textcolor{headertext}{\textbf{Burp Suite}}}} &
+\makecell{\rotatebox{90}{\textcolor{headertext}{\textbf{Nessus}}}} &
+\makecell{\rotatebox{90}{\textcolor{headertext}{\textbf{Splunk SOAR}}}} \\
+\midrule
+\rowcolor{rowlight}
+OWASP Top~10 classification   & \checkmark & \ding{55} & \checkmark & Partial & \checkmark & Partial & Partial \\
+\rowcolor{rowwhite}
+Deterministic risk scoring     & \checkmark & \ding{55} & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+\rowcolor{rowlight}
+Contextual weighting           & \checkmark & \ding{55} & \ding{55} & \ding{55} & \ding{55} & \ding{55} & Partial \\
+\rowcolor{rowwhite}
+AI remediation guidance        & \checkmark & \ding{55} & \ding{55} & \ding{55} & Partial & Partial & \checkmark \\
+\rowcolor{rowlight}
+Hallucination guard            & \checkmark & \ding{55} & \ding{55} & \ding{55} & \ding{55} & \ding{55} & \ding{55} \\
+\rowcolor{rowwhite}
+Iterative delta comparison     & \checkmark & \ding{55} & \ding{55} & Partial & \ding{55} & Partial & \checkmark \\
+\rowcolor{rowlight}
+Exportable PDF reporting       & \checkmark & Partial & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+\rowcolor{rowwhite}
+Open-source / no licence cost  & \checkmark & \checkmark & \checkmark & \checkmark & \ding{55} & \ding{55} & \ding{55} \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1.0}
+\end{table}
+
+PurpleTeam Suite is the only tool in the comparison that implements a closed-loop
+pipeline from network-layer scanning through AI-enriched classification, deterministic
+hallucination validation, contextual scoring and iterative lifecycle comparison within
+a single desktop application. Splunk SOAR comes closest in terms of AI-assisted
+remediation and iterative delta tracking, but it operates as an orchestration layer
+over existing scanners rather than providing integrated scanning, and it carries a
+commercial licence cost. Nessus provides strong scanning breadth and reporting but
+lacks contextual weighting, hallucination validation, and open-source availability.
+The scanning tools (Nmap, OWASP ZAP, OpenVAS, Burp Suite) each cover detection
+within their respective layers but would require manual integration or third-party
+orchestration to achieve equivalent lifecycle coverage. The comparison should be
+interpreted with the caveat noted in Section~\ref{sec:limitations-ethics}:
+PurpleTeam Suite relies on Nmap as its sole scanner, which restricts detection to
+the network layer, whereas OWASP ZAP and Burp Suite operate at the application
+layer and can identify vulnerability classes that network-level scanning cannot reach.
+
+% ─────────────────────────────────────────────
+\section{Discussion}
+\label{sec:discussion}
+
+    \subsection{Scoring Determinism}
+
+    Identical inputs produced identical outputs across all repeat scans conducted
+    during the evaluation, confirming full deterministic reproducibility of the
+    scoring pipeline. The baseline results in Table~\ref{tab:baseline-results}
+    were reproduced without variation when the same target configurations were
+    rescanned under the same feature toggle settings, which validates the design
+    requirement that the deterministic pipeline components (severity calculation,
+    OWASP mapping and contextual weighting) produce consistent numerical outputs
+    independent of external state. This reproducibility is a prerequisite for the
+    ablation and delta analyses conducted in Phases~3 and~4, since any
+    non-deterministic variation in the base score would confound the measurement
+    of per-component contribution.
+
+    \subsection{Contextual Weighting Validity}
+
+    The 69.2\% amplification observed in Phase~2 confirms that
+    exploitability-aware weighting meaningfully differentiates risk profiles
+    beyond flat CVSS-style severity assignment, producing a 74-point increase in
+    total deductions on the Mutillidae target when port exposure multipliers were
+    applied. This amplification demonstrates that the contextual layer adds
+    discriminative value to the scoring output, since two targets with identical
+    severity distributions but different network exposure profiles would receive
+    different scores under the contextual model. The limitation that only port
+    exposure activated on the current target set, with service exposure and
+    authentication weakness remaining at 1.0$\times$ throughout, suggests that
+    the multiplier system would benefit from a broader range of service types and
+    authentication configurations in future testing to fully exercise all three
+    multiplier channels.
+
+    \subsection{Feature Contribution}
+
+    The ablation results in Table~\ref{tab:ablation-results} establish a clear
+    hierarchy of component contribution: contextual weighting is the
+    highest-impact component at $-74$ points, followed by the hallucination guard
+    at $-16$ points and OWASP mapping at $-15$ points, with AI analysis producing
+    a zero-point delta. The AI component's zero-score contribution is by design,
+    since its purpose is to generate remediation guidance and explanatory text
+    rather than to influence the numerical severity calculation. The
+    hallucination guard's 16-point contribution reflects its role as a validation
+    layer that applies confidence-weighted adjustments to AI classifications,
+    which is a secondary scoring effect rather than a primary one.
+
+    \subsection{Lifecycle Tracking Accuracy}
+
+    The $+57$ point score improvement and 53\% vulnerability reduction observed
+    in Phase~4 confirm that the delta comparison system accurately tracks
+    remediation progress across consecutive scan cycles on the controlled
+    testbed. The system correctly distinguished between the 8 resolved findings
+    and the 7 persisting findings without manual intervention, which validates
+    the lifecycle tracking capability as described in
+    Section~\ref{sec:system-design}. This result demonstrates that the pipeline
+    supports the iterative scan-remediate-rescan workflow that the tool is
+    designed to facilitate, producing structured delta outputs that an operator
+    can use to verify that specific remediation actions achieved their intended
+    effect.
+
+    \subsection{AI Reliability}
+
+    Trust scores below the 70 threshold on 3 of the 5 targets indicate that the
+    hallucination guard is flagging genuine AI classification inconsistencies
+    rather than rubber-stamping outputs, which is a feature of the guard's design
+    rather than a deficiency. The guard's purpose is to surface disagreements
+    between AI-generated and deterministic OWASP classifications so that
+    operators can make informed decisions about which AI outputs to trust, and
+    the variation in trust scores across targets demonstrates that this
+    disagreement detection mechanism is sensitive to target complexity and
+    technology stack characteristics. The zero-fabricated-CVE result across all
+    11 scans is a strong positive signal that the AI model is not inventing
+    non-existent vulnerability identifiers, which was identified as a primary
+    hallucination risk in the literature review
+    (Section~\ref{sec:lit-review}).
+
+    \subsection{OWASP Coverage Analysis}
+    \label{sec:owasp-coverage-analysis}
+
+    The baseline scans consistently detected vulnerabilities across four of the ten
+    OWASP Top~10 categories: A01 (Broken Access Control), A02 (Cryptographic Failures),
+    A03 (Injection) and A05 (Security Misconfiguration). The remaining six categories
+    received zero detections across four of the five targets. This pattern reflects a
+    structural constraint of the scanning layer rather than a deficiency in the
+    classification pipeline: the system operates at the network level via Nmap, and the
+    four detected categories align with what service enumeration, NSE scripting and
+    header analysis can observe. The exception is demo.testfire.net, which achieved 5/10
+    coverage by additionally triggering A07 (Identification and Authentication Failures)
+    detections, a result consistent with its financial-application design exposing
+    authentication endpoints that Nmap's NSE scripts can partially enumerate.
+
+    Categories such as A04 (Insecure Design), A08 (Software and Data Integrity Failures)
+    and A09 (Security Logging and Monitoring Failures) are architectural or operational
+    concerns that no automated network-layer scanner can detect. A07 (Identification and
+    Authentication Failures) requires authenticated session testing in most cases, while
+    A10 (Server-Side Request Forgery) requires active input fuzzing against application
+    endpoints, both of which sit outside Nmap's capability set as acknowledged in
+    Section~\ref{sec:limitations-ethics}.
+
+    The 40\% OWASP coverage figure across four of five targets should be read as the
+    system reporting what it can detect rather than inflating coverage beyond its
+    scanner's reach. An application-layer integration, for instance coupling OWASP ZAP
+    or Nikto as a secondary scanner, would extend coverage into A07 and A10 through
+    authenticated crawling and active parameter fuzzing. A combined multi-layer approach
+    would broaden coverage but would still leave architectural categories such as A04
+    and A09 unaddressed without manual review, since these categories describe
+    design-time and operational practices that fall outside the scope of automated
+    scanning.
+
+    \subsection{Limitations}
+    \label{sec:eval-limitations}
+
+    The evaluation itself surfaced several limitations that extend beyond the
+    design-time constraints already acknowledged in
+    Section~\ref{sec:limitations-ethics}. Trust scores falling below the 70
+    threshold on 3 of the 5 targets suggest that either the threshold requires
+    calibration for targets with complex technology stacks, or the AI model's
+    prompt engineering requires refinement for non-PHP server environments. The
+    demo.testfire.net results in particular indicate that the Gemini model's
+    classification accuracy degrades on IIS/ASP.NET targets, which is a
+    constraint that would need to be addressed through either model fine-tuning
+    or stack-specific prompt templates before the tool could be reliably deployed
+    against Microsoft web server infrastructure.
+
+    Additionally, only the port exposure multiplier channel activated across all
+    five targets during the evaluation, with the service exposure and
+    authentication weakness channels remaining at their 1.0$\times$ baseline
+    throughout. This means that the evaluation was unable to measure the
+    contribution of two out of three contextual weighting dimensions, which
+    limits the conclusions that can be drawn about the full multiplier model's
+    behaviour under diverse network conditions. The target set, whilst expanded
+    to five, still represents a narrow range of intentionally vulnerable
+    applications rather than production environments, which is a constraint that
+    limits the generalisability of all quantitative results presented in this
+    chapter.
+
+% ─────────────────────────────────────────────
+\section{Summary}
+\label{sec:ch4-summary}
+
+The five-phase evaluation produced quantitative evidence across all pipeline
+components: Phase~1 established deterministic baseline scores ranging from 50 to
+181 severity deductions across five targets, Phase~2 demonstrated a 69.2\%
+amplification from contextual weighting on the Mutillidae target, and Phase~3
+confirmed contextual weighting as the highest-impact component with a 74-point
+ablation delta. Phase~4 validated the lifecycle tracking system with a 57-point
+score improvement and 53\% vulnerability reduction on the controlled testbed,
+while Phase~5 recorded zero fabricated CVEs across all 11 scans and identified
+trust score variation as a function of target complexity rather than a systematic
+guard deficiency. These results, taken together with the limitations identified
+in Section~\ref{sec:eval-limitations}, provide the empirical basis for the
+conclusions and recommendations presented in Chapter~5.
+
+
+% ============================================================
+% Chapter 5 — Conclusions
+% Target: ~1,500 words (per Slides guidance)
+% ============================================================
+
+%% ============================================================
+\chapter{Conclusions}
+%% ============================================================
+
+\section{Introduction}
+
+\section{Recommendations}
+
+%% ============================================================
+%% Bibliography
+%% ============================================================
+
+\printbibliography[heading=bibintoc, title={Bibliography}]
+
+%% ============================================================
+%% Appendices
+%% ============================================================
+
+\begin{appendices}
+
+\chapter{Repository Information and Statistics}
+
+The full source code for PurpleTeam Suite is hosted on GitHub at:
+\url{https://github.com/umfhero/PurpleTeamAI}
+
+As the application is built on the Electron framework, it can be compiled
+into a standalone executable for Windows, macOS, and Linux. Testing was
+conducted on Windows and Kali Linux. The compiled \texttt{.exe} installer
+for Windows and equivalent binaries for other platforms can be produced
+from the repository source using the standard Electron build toolchain.
+
+\chapter{Project Schedule}
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{\hspace*{-4mm}\scalebox{1.2}[1.12]{\includegraphics[width=\textwidth]{planned_vs_reality.png}}}
+\caption{Planned versus actual project schedule.}
+\label{fig:planned-vs-reality}
+\end{figure}
+
+
+
+
+\end{appendices}
+
+\end{document}
