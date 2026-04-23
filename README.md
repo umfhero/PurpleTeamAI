@@ -30,7 +30,7 @@ PurpleTeam Suite is an Electron desktop application that automates the purple-te
 git clone https://github.com/umfhero/PurpleTeamAI.git
 cd PurpleTeamAI/frontend
 npm install
-echo "GEMINI_API_KEY=your_key_here" > .env (Place your API key in a .env file in the root directory)
+
 npm run dev
 ```
 
@@ -84,4 +84,3 @@ PurpleTeamAI/
 ## Ethics and authorised use
 
 Active network scanning is regulated under the Computer Misuse Act 1990. The allowlist in `frontend/allowed-targets.json` is enforced in the main process before Nmap is invoked. Do not modify the allowlist to target systems you do not own or have explicit written permission to scan.
-
