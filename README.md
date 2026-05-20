@@ -34,9 +34,18 @@ npm install
 npm run dev
 ```
 
+To run the vulnerable testbed (optional, for end-to-end testing against a local target):
+
+```bash
+cd ../test-site
+npm install
+node server.js
+```
+
 To build a standalone installer:
 
 ```bash
+cd ../frontend
 npm run build
 ```
 
