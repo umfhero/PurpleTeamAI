@@ -217,7 +217,10 @@ export default function HallucinationMetricsPanel({ selectedScanTimestamp, targe
                         fontSize: '11px',
                         color: '#e0e0e0',
                       }}
-                      formatter={(value?: number) => [`${value}/100`, 'Trust Score']}
+                      formatter={(value) => {
+                        const displayValue = Array.isArray(value) ? value[0] : value
+                        return [`${displayValue}/100`, 'Trust Score']
+                      }}
                       labelFormatter={(_: unknown, payload: ReadonlyArray<{ payload?: { timestamp?: string } }>) => {
                         if (payload?.[0]?.payload?.timestamp) {
                           return new Date(payload[0].payload.timestamp).toLocaleDateString()
