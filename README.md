@@ -20,9 +20,24 @@ PurpleTeam Suite is an Electron desktop application that automates the purple-te
 
 ## Requirements
 
+### Runtime (installed app / EXE)
+
+- Nmap on the system `PATH` (Kali Linux already includes it; Windows: install from https://nmap.org/download.html; macOS: `brew install nmap`; Ubuntu/Debian: `sudo apt install nmap`)
+- A Google Gemini API key (set `GEMINI_API_KEY` in `frontend/.env` or as an environment variable)
+
+### Development
+
 - Node.js 18+
-- Nmap on the system `PATH`
-- A Google Gemini API key (free tier is sufficient)
+
+### Gemini API key setup
+
+Create `frontend/.env` (copy `frontend/.env.example`) with:
+
+```env
+GEMINI_API_KEY=your_key_here
+```
+
+If you are using the prebuilt EXE without rebuilding, set `GEMINI_API_KEY` in your OS environment before launching.
 
 ## Quick start
 

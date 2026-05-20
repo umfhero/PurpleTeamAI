@@ -68,7 +68,7 @@
     ],
     "extraResources": [
       {
-        "from": "../.env",
+        "from": ".env",
         "to": ".env"
       },
       {
