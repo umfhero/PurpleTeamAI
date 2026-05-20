@@ -4,16 +4,20 @@
   "version": "1.0.0",
   "description": "AI-powered penetration testing suite with Nmap integration",
   "author": "PurpleTeam Suite",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/umfhero/PurpleTeamAI.git"
+  },
   "homepage": "https://github.com/purpleteam-suite",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && electron-builder",
-    "build:win": "tsc -b && vite build && electron-builder --win",
-    "build:mac": "tsc -b && vite build && electron-builder --mac",
-    "build:linux": "tsc -b && vite build && electron-builder --linux",
-    "build:all": "tsc -b && vite build && electron-builder --win --mac --linux",
+    "build": "tsc -b && vite build && electron-builder --publish never",
+    "build:win": "tsc -b && vite build && electron-builder --win --publish never",
+    "build:mac": "tsc -b && vite build && electron-builder --mac --publish never",
+    "build:linux": "tsc -b && vite build && electron-builder --linux --publish never",
+    "build:all": "tsc -b && vite build && electron-builder --win --mac --linux --publish never",
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:dev": "vite build && electron ."
