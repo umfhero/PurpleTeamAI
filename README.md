@@ -16,7 +16,15 @@
 
 ## About
 
-PurpleTeam Suite is an Electron desktop application that automates the purple-team lifecycle in a single pipeline: Nmap scanning, deterministic OWASP Top 10 classification, exploitability-aware scoring, AI-assisted analysis, hallucination validation, delta comparison and exportable PDF reporting.
+PurpleTeam Suite | BSc Cyber Security Final Year Project | Middlesex University London
+
+The question I wanted to answer was whether an inherently non-deterministic LLM could be architecturally constrained enough to function as a deterministic-first tool inside a real purple team workflow, where outputs have to be reproducible and operationally trustworthy, not just plausible-sounding.
+
+So I built an Electron, React and TypeScript desktop application implementing a ten-stage automated vulnerability assessment pipeline: two-phase Nmap scanning, deterministic OWASP Top 10 classification via a weighted keyword mapper that runs before the LLM ever sees the data, exploitability-aware contextual scoring using four stacked multipliers (port exposure, service exposure, authentication weakness, TLS absence), Gemini 2.5 Flash analysis under strict JSON schema enforcement, and a post-AI hallucination guard that cross-validates every AI-generated OWASP label against the deterministic classifier, scoring disagreements into a quantified trust score rather than treating AI confidence as self-validating.
+
+Key results: contextual weighting produced a 69.2% amplification in severity deductions versus flat scoring, ablation confirmed it as the highest-impact component with a 74-point delta when disabled, a full scan-remediate-rescan cycle produced a 57-point score improvement with 53% fewer findings, and zero fabricated CVE identifiers were recorded across all 11 AI-guarded scans.
+
+Supervised by David Neilson at Middlesex University London, graded First-class standard.
 
 ## Requirements
 
