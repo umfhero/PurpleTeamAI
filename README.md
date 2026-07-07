@@ -116,3 +116,15 @@ PurpleTeamAI/
 ## Ethics and authorised use
 
 Active network scanning is regulated under the Computer Misuse Act 1990. The allowlist in `frontend/allowed-targets.json` is enforced in the main process before Nmap is invoked. Do not modify the allowlist to target systems you do not own or have explicit written permission to scan.
+
+
+## Licence
+Copyright (c) 2026 umf. All rights reserved.
+
+This source code and all associated files are the exclusive property of the copyright holder.
+
+No part of this repository may be used, copied, modified, merged, published, distributed,
+sublicensed, or sold, in whole or in part, without the prior written permission of the
+copyright holder.
+
+This software is provided "as is", without warranty of any kind.
